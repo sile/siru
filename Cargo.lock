@@ -15,7 +15,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f04459ec5e667063406c9155f199d9628e1f791a2f27c0bc58165a8716e89b86"
 
 [[package]]
-name = "ruuk"
+name = "siru"
 version = "0.1.0"
 dependencies = [
  "noargs",
