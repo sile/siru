@@ -257,28 +257,57 @@ impl<'a> PublicItemCollector<'a> {
             self.public_items.push((path.clone(), item.clone()));
         }
 
+        let inner = item.inner(self.json);
         match item.kind {
-            ItemKind::Module => self.visit_module(path, &item)?,
-            _ => todo!(),
+            ItemKind::Module => {
+                for item_id_value in inner.to_member("items")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value)?;
+                }
+            }
+            ItemKind::Enum => {
+                for item_id_value in inner.to_member("variants")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value)?;
+                }
+                for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value)?;
+                }
+            }
+            ItemKind::Struct => {
+                for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value)?;
+                }
+            }
+            ItemKind::Trait => {
+                for item_id_value in inner.to_member("items")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value)?;
+                }
+            }
+            ItemKind::Impl => {
+                for item_id_value in inner.to_member("items")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value)?;
+                }
+            }
+            // Leaf items with no children to visit
+            ItemKind::Use
+            | ItemKind::Variant
+            | ItemKind::TypeAlias
+            | ItemKind::Function
+            | ItemKind::Constant
+            | ItemKind::AssocType
+            | ItemKind::AssocConst
+            | ItemKind::Macro => {}
         }
 
         if item.name.is_some() {
             path.0.pop();
         }
 
-        Ok(())
-    }
-
-    fn visit_module(
-        &mut self,
-        path: &mut ItemPath,
-        item: &Item,
-    ) -> Result<(), nojson::JsonParseError> {
-        let inner = item.inner(self.json);
-        for item_id_value in inner.to_member("items")?.required()?.to_array()? {
-            let item_value = self.items.get(self.json, item_id_value)?;
-            self.visit_item(path, item_value)?;
-        }
         Ok(())
     }
 }
