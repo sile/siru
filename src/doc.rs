@@ -241,7 +241,8 @@ impl CrateDoc {
         path: &mut ItemPath,
         item: &Item,
     ) -> Result<(), nojson::JsonParseError> {
-        // TODO: implement module visiting
-        Ok(())
+        self.public_items.push((path.clone(), item.clone()));
+
+        todo!()
     }
 }
