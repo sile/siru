@@ -33,7 +33,7 @@ impl std::fmt::Display for ItemId {
 pub struct CrateItems(std::collections::HashMap<ItemId, crate::json::JsonValueIndex>);
 
 impl CrateItems {
-    pub fn get_item<'a>(
+    pub fn get<'a>(
         &self,
         json: &'a nojson::RawJsonOwned,
         item_id: ItemId,
@@ -64,8 +64,22 @@ impl CrateDoc {
     pub fn parse(path: std::path::PathBuf, text: &str) -> Result<Self, nojson::JsonParseError> {
         let json = nojson::RawJsonOwned::parse(text)?;
         let value = json.value();
-        let root_module_id: ItemId = value.to_member("root")?.required()?.try_into()?;
+        let root_value = value.to_member("root")?.required()?;
+        let root_module_id: ItemId = root_value.try_into()?;
         let items: CrateItems = value.to_member("index")?.required()?.try_into()?;
-        todo!()
+        let root_module_value = items
+            .get(&json, root_module_id)
+            .ok_or_else(|| root_value.invalid("missing item ID"))?;
+        let crate_name = root_module_value
+            .to_member("name")?
+            .required()?
+            .try_into()?;
+        Ok(Self {
+            path,
+            json,
+            crate_name,
+            items,
+            root_module_id,
+        })
     }
 }
