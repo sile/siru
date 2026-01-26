@@ -1,6 +1,12 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct JsonValueIndex(usize);
 
+impl JsonValueIndex {
+    pub fn get(self) -> usize {
+        self.0
+    }
+}
+
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for JsonValueIndex {
     type Error = nojson::JsonParseError;
 
