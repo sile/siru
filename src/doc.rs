@@ -132,7 +132,6 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
 }
 
 impl Item {
-    /// Retrieves the inner JSON value for this item
     fn inner<'a>(&self, json: &'a nojson::RawJsonOwned) -> nojson::RawJsonValue<'a, 'a> {
         json.get_value_by_index(self.inner_index.get())
             .expect("bug")
@@ -209,7 +208,11 @@ impl CrateDoc {
             public_items: Vec::new(),
         };
         let mut collector = PublicItemCollector::new(&this.json, &this.items);
-        collector.collect(this.root_module_index)?;
+        let root_module_value = this
+            .json
+            .get_value_by_index(this.root_module_index.get())
+            .expect("bug");
+        collector.collect(root_module_value)?;
         this.public_items = collector.public_items;
         Ok(this)
     }
@@ -230,18 +233,21 @@ impl<'a> PublicItemCollector<'a> {
         }
     }
 
-    fn collect(&mut self, root_module_index: JsonValueIndex) -> Result<(), nojson::JsonParseError> {
+    fn collect(
+        &mut self,
+        root_module_value: nojson::RawJsonValue<'a, 'a>,
+    ) -> Result<(), nojson::JsonParseError> {
         let mut path = ItemPath(Vec::new());
-        self.visit_item(&mut path, root_module_index)?;
+        self.visit_item(&mut path, root_module_value)?;
         Ok(())
     }
 
     fn visit_item(
         &mut self,
         path: &mut ItemPath,
-        item_index: JsonValueIndex,
+        item_value: nojson::RawJsonValue<'a, 'a>,
     ) -> Result<(), nojson::JsonParseError> {
-        let item = Item::try_from(self.json.get_value_by_index(item_index.get()).expect("bug"))?;
+        let item = Item::try_from(item_value)?;
         if !item.is_public {
             return Ok(());
         }
@@ -273,7 +279,7 @@ impl<'a> PublicItemCollector<'a> {
 
         for item_id_value in inner.to_member("items")?.required()?.to_array()? {
             let item_value = self.items.get(self.json, item_id_value)?;
-            self.visit_item(path, item_value.try_into()?)?;
+            self.visit_item(path, item_value)?;
         }
 
         Ok(())
