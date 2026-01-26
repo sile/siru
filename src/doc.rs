@@ -131,6 +131,14 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
     }
 }
 
+impl Item {
+    /// Retrieves the inner JSON value for this item
+    fn inner<'a>(&self, json: &'a nojson::RawJsonOwned) -> nojson::RawJsonValue<'a, 'a> {
+        json.get_value_by_index(self.inner_index.get())
+            .expect("bug")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ItemPath(Vec<String>);
 
@@ -261,6 +269,13 @@ impl<'a> PublicItemCollector<'a> {
     ) -> Result<(), nojson::JsonParseError> {
         self.public_items.push((path.clone(), item.clone()));
 
-        todo!()
+        let inner = item.inner(self.json);
+
+        for item_id_value in inner.to_member("items")?.required()?.to_array()? {
+            let item_value = self.items.get(self.json, item_id_value)?;
+            self.visit_item(path, item_value.try_into()?)?;
+        }
+
+        Ok(())
     }
 }
