@@ -16,8 +16,8 @@ fn main() -> noargs::Result<()> {
         .take(&mut args)
         .is_present();
 
-    if flag {
-        //    let _ = ruuk::command_list::run(&mut args)? || ruuk::command_view::run(&mut args)?;
+    if ext {
+        let _ = siru::command_build_doc::run(&mut args)?;
     } else {
         // run main command
     }

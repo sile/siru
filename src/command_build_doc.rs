@@ -1,0 +1,26 @@
+pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
+    if !noargs::cmd("build-doc")
+        .doc("Build JSON format documentation")
+        .take(args)
+        .is_present()
+    {
+        return Ok(false);
+    }
+
+    if args.metadata().help_mode {
+        return Ok(true);
+    }
+
+    let status = std::process::Command::new("cargo")
+        .env("RUSTC_BOOTSTRAP", "1")
+        .env("RUSTDOCFLAGS", "-Z unstable-options --output-format json")
+        .args(&["doc"])
+        .status()
+        .map_err(|e| format!("Failed to run cargo doc: {}", e))?;
+
+    if !status.success() {
+        return Err("cargo doc command failed".into());
+    }
+
+    Ok(true)
+}
