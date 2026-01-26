@@ -45,7 +45,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
 
     // show summary
 
-    for doc in docs {
+    for _doc in docs {
         //
     }
 

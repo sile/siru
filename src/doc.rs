@@ -113,8 +113,74 @@ impl CrateDoc {
 
     fn collect_public_items(&mut self) -> Result<(), nojson::JsonParseError> {
         let mut path = ItemPath(Vec::new());
-        self.visit_module(&mut path, self.root_module_index)?;
+        self.visit_item(&mut path, self.root_module_index)?;
+        Ok(())
+    }
 
-        todo!()
+    fn visit_item(
+        &mut self,
+        path: &mut ItemPath,
+        item_index: JsonValueIndex,
+    ) -> Result<(), nojson::JsonParseError> {
+        let item = self.json.get_value_by_index(item_index.0).expect("bug");
+
+        // Recursively visit modules; skip non-public items
+        let (kind, inner) = item
+            .to_member("inner")?
+            .required()?
+            .to_object()?
+            .next()
+            .ok_or_else(|| item.invalid("empty inner"))?;
+
+        let kind_str = kind.to_unquoted_string_str()?;
+
+        if kind_str == "module" {
+            self.visit_module(path, item_index)?;
+        }
+
+        Ok(())
+    }
+
+    fn visit_module(
+        &mut self,
+        path: &mut ItemPath,
+        module_index: JsonValueIndex,
+    ) -> Result<(), nojson::JsonParseError> {
+        let module = self.json.get_value_by_index(module_index.0).expect("bug");
+
+        // Check if module is public
+        let visibility = module
+            .to_member("visibility")?
+            .required()?
+            .to_unquoted_string_str()?;
+
+        if visibility != "public" {
+            return Ok(());
+        }
+
+        // Get module name and add to path
+        let name: String = module.to_member("name")?.required()?.try_into()?;
+        path.0.push(name);
+
+        // Get the inner module data and iterate through items
+        let inner = module
+            .to_member("inner")?
+            .required()?
+            .to_member("module")?
+            .required()?;
+
+        for item_id_value in inner.to_member("items")?.required()?.to_array()? {
+            let item_id: ItemId = item_id_value.try_into()?;
+            let item_index = self
+                .items
+                .0
+                .get(&item_id)
+                .copied()
+                .ok_or_else(|| item_id_value.invalid("item not found"))?;
+            self.visit_item(path, item_id, item_index)?;
+        }
+
+        path.0.pop();
+        Ok(())
     }
 }
