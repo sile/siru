@@ -1,3 +1,14 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct JsonValueIndex(usize);
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for JsonValueIndex {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        Ok(Self(value.index()))
+    }
+}
+
 pub fn format_parse_error(text: &str, error: nojson::JsonParseError) -> String {
     let (line_num, column_num) = error
         .get_line_and_column_numbers(text)
