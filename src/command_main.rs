@@ -7,12 +7,23 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         .default("target/doc/")
         .take(args)
         .then(|a| a.value().split(':').map(|a| a.parse()).collect())?;
+    let verbose = noargs::flag("verbose")
+        .short('v')
+        .doc("Enable verbose output")
+        .take(args)
+        .is_present();
 
     if args.metadata().help_mode {
         return Ok(());
     }
 
     let doc_file_paths = collect_doc_file_paths(&doc_paths)?;
+    if verbose {
+        eprintln!("Documentation file paths:");
+        for path in &doc_file_paths {
+            eprintln!("  {}", path.display());
+        }
+    }
 
     Ok(())
 }
