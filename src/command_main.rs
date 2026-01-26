@@ -7,6 +7,17 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         .default("target/doc/")
         .take(args)
         .then(|a| a.value().split(':').map(|a| a.parse()).collect())?;
+
+    let mut target_crates = std::collections::HashSet::new();
+    while let Some(a) = noargs::opt("crate")
+        .short('c')
+        .doc("TODO")
+        .take(args)
+        .present()
+    {
+        target_crates.insert(a.value().to_owned());
+    }
+
     // TODO: --kind, --crate, <ITEM_NAME_PART>...
     let verbose = noargs::flag("verbose")
         .short('v')
@@ -34,6 +45,9 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         let doc = crate::doc::CrateDoc::parse(path, &text)
             .map_err(|e| crate::json::format_parse_error(&text, e))?;
 
+        if !target_crates.contains(&doc.crate_name) {
+            continue;
+        }
         if !known_crates.insert(doc.crate_name.clone()) {
             if verbose {
                 eprintln!("Warning: duplicate crate '{}' ignored", doc.crate_name);
