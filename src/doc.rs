@@ -314,6 +314,14 @@ impl<'a> PublicItemCollector<'a> {
                 }
             }
             ItemKind::Struct => {
+                let kind = inner.to_member("kind")?.required()?;
+                if kind.to_unquoted_string_str()? == "plain" {
+                    for field_id_value in inner.to_member("fields")?.required()?.to_array()? {
+                        let field_value = self.items.get(self.json, field_id_value)?;
+                        self.visit_item(path, field_value)?;
+                    }
+                }
+
                 for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
                     self.visit_item(path, item_value)?;
