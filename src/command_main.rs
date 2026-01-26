@@ -7,6 +7,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         .default("target/doc/")
         .take(args)
         .then(|a| a.value().split(':').map(|a| a.parse()).collect())?;
+    // TODO: --kind, --crate, <ITEM_NAME_PART>...
     let verbose = noargs::flag("verbose")
         .short('v')
         .doc("Enable verbose output")
