@@ -41,6 +41,13 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             continue;
         }
 
+        if verbose {
+            eprintln!("Public items in crate '{}':", doc.crate_name);
+            for (path, item) in &doc.public_items {
+                eprintln!("  [{}] {}", item.kind, full_path);
+            }
+        }
+
         docs.push(doc);
     }
 
