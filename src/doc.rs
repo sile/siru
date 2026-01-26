@@ -92,10 +92,43 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
 }
 
 #[derive(Debug, Clone)]
-pub struct PublicItem {
-    pub path: ItemPath,
+pub struct Item {
+    pub name: Option<String>,
     pub kind: ItemKind,
-    pub index: JsonValueIndex,
+    pub is_public: bool,
+    pub deprecation_index: Option<JsonValueIndex>,
+    pub inner_index: JsonValueIndex,
+}
+
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
+        let name = value.to_member("name")?.try_into()?;
+        let kind = value
+            .to_member("inner")?
+            .required()?
+            .to_object()?
+            .next()
+            .ok_or_else(|| value.invalid("empty inner"))?
+            .0
+            .try_into()?;
+        let visibility = value
+            .to_member("visibility")?
+            .required()?
+            .to_unquoted_string_str()?;
+        let deprecation_index = value.to_member("deprecation")?.try_into()?;
+        let inner_index = value.to_member("inner")?.required()?.try_into()?;
+
+        let is_public = visibility.as_ref() == "public" || matches!(kind, ItemKind::Impl);
+        Ok(Self {
+            name,
+            kind,
+            is_public,
+            deprecation_index,
+            inner_index,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -144,7 +177,7 @@ pub struct CrateDoc {
     pub crate_name: String,
     pub items: CrateItems,
     pub root_module_index: JsonValueIndex,
-    pub public_items: Vec<PublicItem>,
+    pub public_items: Vec<(ItemPath, Item)>,
 }
 
 impl CrateDoc {
@@ -182,19 +215,22 @@ impl CrateDoc {
         path: &mut ItemPath,
         item_index: JsonValueIndex,
     ) -> Result<(), nojson::JsonParseError> {
-        let item = self.json.get_value_by_index(item_index.get()).expect("bug");
+        let item = Item::try_from(self.json.get_value_by_index(item_index.get()).expect("bug"))?;
+        if !item.is_public {
+            return Ok(());
+        }
 
-        let (kind, inner) = item
-            .to_member("inner")?
-            .required()?
-            .to_object()?
-            .next()
-            .ok_or_else(|| item.invalid("empty inner"))?;
-        let kind = ItemKind::try_from(kind)?;
+        if let Some(name) = &item.name {
+            path.0.push(name.clone());
+        }
 
-        match kind {
-            ItemKind::Module => self.visit_module(path, item_index, inner.try_into()?)?,
+        match item.kind {
+            ItemKind::Module => self.visit_module(path, &item)?,
             _ => todo!(),
+        }
+
+        if item.name.is_some() {
+            path.0.pop();
         }
 
         Ok(())
@@ -203,8 +239,7 @@ impl CrateDoc {
     fn visit_module(
         &mut self,
         path: &mut ItemPath,
-        _item_index: JsonValueIndex,
-        _inner_index: JsonValueIndex,
+        item: &Item,
     ) -> Result<(), nojson::JsonParseError> {
         // TODO: implement module visiting
         Ok(())
