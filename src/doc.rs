@@ -1,3 +1,5 @@
+use crate::json::JsonValueIndex;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ItemId(usize);
 
@@ -33,7 +35,7 @@ impl std::fmt::Display for ItemId {
 pub struct PublicItem {
     pub path: ItemPath,
     pub kind: &'static str,
-    pub index: crate::json::JsonValueIndex,
+    pub index: JsonValueIndex,
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +52,7 @@ impl ItemPath {
 }
 
 #[derive(Debug)]
-pub struct CrateItems(std::collections::HashMap<ItemId, crate::json::JsonValueIndex>);
+pub struct CrateItems(std::collections::HashMap<ItemId, JsonValueIndex>);
 
 impl CrateItems {
     fn get<'a>(
@@ -81,7 +83,7 @@ pub struct CrateDoc {
     pub json: nojson::RawJsonOwned,
     pub crate_name: String,
     pub items: CrateItems,
-    pub root_module_index: crate::json::JsonValueIndex,
+    pub root_module_index: JsonValueIndex,
     pub public_items: Vec<PublicItem>,
 }
 
@@ -97,7 +99,7 @@ impl CrateDoc {
             .required()?
             .try_into()?;
         let root_module_index = root_module_value.try_into()?;
-        let this = Self {
+        let mut this = Self {
             path,
             json,
             crate_name,
@@ -105,6 +107,14 @@ impl CrateDoc {
             root_module_index,
             public_items: Vec::new(),
         };
+        this.collect_public_items()?;
         Ok(this)
+    }
+
+    fn collect_public_items(&mut self) -> Result<(), nojson::JsonParseError> {
+        let mut path = ItemPath(Vec::new());
+        self.visit_module(&mut path, self.root_module_index)?;
+
+        todo!()
     }
 }
