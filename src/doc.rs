@@ -28,3 +28,11 @@ impl std::fmt::Display for ItemId {
         write!(f, "{}", self.0)
     }
 }
+
+#[derive(Debug)]
+pub struct CrateDoc {
+    pub path: std::path::PathBuf,
+    pub json: nojson::RawJsonOwned,
+    pub crate_name: String,
+    pub index: std::collections::HashMap<ItemId, crate::json::JsonValueIndex>,
+}
