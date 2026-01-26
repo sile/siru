@@ -55,6 +55,25 @@ impl std::fmt::Display for ItemKind {
 }
 
 impl ItemKind {
+    /// Returns the Rust keyword representation for this item kind (as it appears in source code)
+    pub fn as_keyword_str(self) -> &'static str {
+        match self {
+            ItemKind::Module => "mod",
+            ItemKind::Use => "use",
+            ItemKind::Enum => "enum",
+            ItemKind::Variant => "variant",
+            ItemKind::Struct => "struct",
+            ItemKind::TypeAlias => "type",
+            ItemKind::Function => "fn",
+            ItemKind::Constant => "const",
+            ItemKind::Trait => "trait",
+            ItemKind::AssocType => "type",
+            ItemKind::AssocConst => "const",
+            ItemKind::Macro => "macro",
+            ItemKind::Impl => "impl",
+        }
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             ItemKind::Module => "module",
