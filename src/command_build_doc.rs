@@ -19,7 +19,9 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
         .map_err(|e| format!("Failed to run cargo doc: {}", e))?;
 
     if !status.success() {
-        return Err("cargo doc command failed".into());
+        // Cargo has already printed detailed error messages to stderr.
+        // Exit with error code without additional logging.
+        std::process::exit(1);
     }
 
     Ok(true)
