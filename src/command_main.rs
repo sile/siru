@@ -1,33 +1,50 @@
 pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
-    let mut cargo_args = vec!["doc".to_owned()];
-    while let Some(a) = noargs::arg("[CARGO_DOC_ARG]...")
-        .doc("")
+    let doc_paths: Vec<std::path::PathBuf> = noargs::opt("doc-path")
+        .short('d')
+        .ty("FILE|DIR[:FILE|DIR]...")
+        .doc("TODO")
+        .env("SIRU_DOC_PATH")
+        .default("target/doc/")
         .take(args)
-        .present()
-    {
-        cargo_args.push(a.value().to_owned());
-    }
+        .then(|a| a.value().split(':').map(|a| a.parse()).collect())?;
 
     if args.metadata().help_mode {
         return Ok(());
     }
 
-    eprintln!(
-        "Running: `$ cargo {}` with RUSTC_BOOTSTRAP=1 and RUSTDOCFLAGS='-Z unstable-options --output-format json'",
-        cargo_args.join(" ")
-    );
-    let status = std::process::Command::new("cargo")
-        .env("RUSTC_BOOTSTRAP", "1")
-        .env("RUSTDOCFLAGS", "-Z unstable-options --output-format json")
-        .args(&cargo_args)
-        .status()
-        .map_err(|e| format!("Failed to run cargo command: {e}"))?;
-
-    if !status.success() {
-        // Cargo has already printed detailed error messages to stderr.
-        // Exit with error code without additional logging.
-        std::process::exit(1);
-    }
+    let doc_file_paths = collect_doc_file_paths(&doc_paths)?;
 
     Ok(())
+}
+
+fn collect_doc_file_paths(
+    doc_paths: &[std::path::PathBuf],
+) -> noargs::Result<Vec<std::path::PathBuf>> {
+    let mut file_paths = Vec::new();
+
+    for path in doc_paths {
+        if path.is_file() {
+            file_paths.push(path.clone());
+        } else if path.is_dir() {
+            // Collect *.json files non-recursively
+            for entry in std::fs::read_dir(path)
+                .map_err(|e| format!("failed to read directory '{}': {e}", path.display()))?
+            {
+                let entry = entry.map_err(|e| format!("Failed to read directory entry: {e}"))?;
+                let file_path = entry.path();
+
+                if file_path.is_file() && file_path.extension().is_some_and(|ext| ext == "json") {
+                    file_paths.push(file_path);
+                }
+            }
+        } else {
+            return Err(format!(
+                "Path '{}' is neither a file nor a directory",
+                path.display()
+            )
+            .into());
+        }
+    }
+
+    Ok(file_paths)
 }
