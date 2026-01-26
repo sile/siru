@@ -29,6 +29,26 @@ impl std::fmt::Display for ItemId {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct PublicItem {
+    pub path: ItemPath,
+    pub kind: &'static str,
+    pub index: crate::json::JsonValueIndex,
+}
+
+#[derive(Debug, Clone)]
+pub struct ItemPath(Vec<String>);
+
+impl ItemPath {
+    pub fn crate_name(&self) -> &str {
+        &self.0[0]
+    }
+
+    pub fn name(&self) -> &str {
+        self.0.last().expect("bug")
+    }
+}
+
 #[derive(Debug)]
 pub struct CrateItems(std::collections::HashMap<ItemId, crate::json::JsonValueIndex>);
 
@@ -62,6 +82,7 @@ pub struct CrateDoc {
     pub crate_name: String,
     pub items: CrateItems,
     pub root_module_index: crate::json::JsonValueIndex,
+    pub public_items: Vec<PublicItem>,
 }
 
 impl CrateDoc {
@@ -76,12 +97,14 @@ impl CrateDoc {
             .required()?
             .try_into()?;
         let root_module_index = root_module_value.try_into()?;
-        Ok(Self {
+        let this = Self {
             path,
             json,
             crate_name,
             items,
-            root_module_index
-        })
+            root_module_index,
+            public_items: Vec::new(),
+        };
+        Ok(this)
     }
 }
