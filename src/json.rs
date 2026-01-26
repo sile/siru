@@ -43,7 +43,7 @@ pub fn format_parse_error(text: &str, error: nojson::JsonParseError) -> String {
         } else {
             "".to_owned()
         },
-        line_num,
+        "",
         "^",
         width = line_num_width,
         padding = line_num_width + 1,
