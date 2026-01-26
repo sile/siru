@@ -200,13 +200,31 @@ impl CrateDoc {
             root_module_index,
             public_items: Vec::new(),
         };
-        this.collect_public_items()?;
+        let mut collector = PublicItemCollector::new(&this.json, &this.items);
+        collector.collect(this.root_module_index)?;
+        this.public_items = collector.public_items;
         Ok(this)
     }
+}
 
-    fn collect_public_items(&mut self) -> Result<(), nojson::JsonParseError> {
+struct PublicItemCollector<'a> {
+    json: &'a nojson::RawJsonOwned,
+    items: &'a CrateItems,
+    public_items: Vec<(ItemPath, Item)>,
+}
+
+impl<'a> PublicItemCollector<'a> {
+    fn new(json: &'a nojson::RawJsonOwned, items: &'a CrateItems) -> Self {
+        Self {
+            json,
+            items,
+            public_items: Vec::new(),
+        }
+    }
+
+    fn collect(&mut self, root_module_index: JsonValueIndex) -> Result<(), nojson::JsonParseError> {
         let mut path = ItemPath(Vec::new());
-        self.visit_item(&mut path, self.root_module_index)?;
+        self.visit_item(&mut path, root_module_index)?;
         Ok(())
     }
 
