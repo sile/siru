@@ -38,6 +38,7 @@ pub enum ItemKind {
     Enum,
     Variant,
     Struct,
+    StructField,
     TypeAlias,
     Function,
     Constant,
@@ -63,6 +64,7 @@ impl ItemKind {
             ItemKind::Enum => "enum",
             ItemKind::Variant => "variant",
             ItemKind::Struct => "struct",
+            ItemKind::StructField => "field",
             ItemKind::TypeAlias => "type",
             ItemKind::Function => "fn",
             ItemKind::Constant => "const",
@@ -81,6 +83,7 @@ impl ItemKind {
             ItemKind::Enum => "enum",
             ItemKind::Variant => "variant",
             ItemKind::Struct => "struct",
+            ItemKind::StructField => "struct_field",
             ItemKind::TypeAlias => "type_alias",
             ItemKind::Function => "function",
             ItemKind::Constant => "constant",
@@ -103,6 +106,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "enum" => Ok(ItemKind::Enum),
             "variant" => Ok(ItemKind::Variant),
             "struct" => Ok(ItemKind::Struct),
+            "struct_field" => Ok(ItemKind::StructField),
             "type_alias" => Ok(ItemKind::TypeAlias),
             "function" => Ok(ItemKind::Function),
             "constant" => Ok(ItemKind::Constant),
@@ -314,9 +318,11 @@ impl<'a> PublicItemCollector<'a> {
                 }
             }
             ItemKind::Struct => {
-                let kind = inner.to_member("kind")?.required()?;
-                if kind.to_unquoted_string_str()? == "plain" {
-                    for field_id_value in inner.to_member("fields")?.required()?.to_array()? {
+                if let Some((kind, plain)) =
+                    inner.to_member("kind")?.required()?.to_object()?.next()
+                    && kind.to_unquoted_string_str()? == "plain"
+                {
+                    for field_id_value in plain.to_member("fields")?.required()?.to_array()? {
                         let field_value = self.items.get(self.json, field_id_value)?;
                         self.visit_item(path, field_value)?;
                     }
@@ -349,6 +355,7 @@ impl<'a> PublicItemCollector<'a> {
             }
             // Leaf items with no children to visit
             ItemKind::Variant
+            | ItemKind::StructField
             | ItemKind::TypeAlias
             | ItemKind::Function
             | ItemKind::Constant
