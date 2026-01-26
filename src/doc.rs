@@ -144,7 +144,8 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
             .to_unquoted_string_str()?;
         let deprecation_index = value.to_member("deprecation")?.required()?.try_into()?;
 
-        let is_public = visibility.as_ref() == "public" || matches!(kind, ItemKind::Impl);
+        let is_public =
+            visibility.as_ref() == "public" || matches!(kind, ItemKind::Impl | ItemKind::Variant);
         Ok(Self {
             name,
             kind,
