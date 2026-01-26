@@ -33,13 +33,17 @@ impl std::fmt::Display for ItemId {
 pub struct CrateItems(std::collections::HashMap<ItemId, crate::json::JsonValueIndex>);
 
 impl CrateItems {
-    pub fn get<'a>(
+    fn get<'a>(
         &self,
         json: &'a nojson::RawJsonOwned,
-        item_id: ItemId,
-    ) -> Option<nojson::RawJsonValue<'a, 'a>> {
-        let i = self.0.get(&item_id)?; // If the item belongs to an external crate, this will return None
-        json.get_value_by_index(i.get()) // This always returns Some(_) (unless `json` is incorrect)
+        item_id_value: nojson::RawJsonValue<'a, 'a>,
+    ) -> Result<nojson::RawJsonValue<'a, 'a>, nojson::JsonParseError> {
+        let item_id: ItemId = item_id_value.try_into()?;
+        let i = self
+            .0
+            .get(&item_id)
+            .ok_or_else(|| item_id_value.invalid("item does not exist in this crate"))?;
+        Ok(json.get_value_by_index(i.get()).expect("bug"))
     }
 }
 
@@ -57,29 +61,27 @@ pub struct CrateDoc {
     pub json: nojson::RawJsonOwned,
     pub crate_name: String,
     pub items: CrateItems,
-    pub root_module_id: ItemId,
+    pub root_module_index: crate::json::JsonValueIndex,
 }
 
 impl CrateDoc {
     pub fn parse(path: std::path::PathBuf, text: &str) -> Result<Self, nojson::JsonParseError> {
         let json = nojson::RawJsonOwned::parse(text)?;
         let value = json.value();
-        let root_value = value.to_member("root")?.required()?;
-        let root_module_id: ItemId = root_value.try_into()?;
+        let root_module_id_value = value.to_member("root")?.required()?;
         let items: CrateItems = value.to_member("index")?.required()?.try_into()?;
-        let root_module_value = items
-            .get(&json, root_module_id)
-            .ok_or_else(|| root_value.invalid("missing item ID"))?;
+        let root_module_value = items.get(&json, root_module_id_value)?;
         let crate_name = root_module_value
             .to_member("name")?
             .required()?
             .try_into()?;
+        let root_module_index = root_module_value.try_into()?;
         Ok(Self {
             path,
             json,
             crate_name,
             items,
-            root_module_id,
+            root_module_index
         })
     }
 }
