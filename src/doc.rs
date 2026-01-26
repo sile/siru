@@ -104,21 +104,20 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
     type Error = nojson::JsonParseError;
 
     fn try_from(value: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
-        let name = value.to_member("name")?.try_into()?;
-        let kind = value
+        let name = value.to_member("name")?.required()?.try_into()?;
+        let (kind, inner) = value
             .to_member("inner")?
             .required()?
             .to_object()?
             .next()
-            .ok_or_else(|| value.invalid("empty inner"))?
-            .0
-            .try_into()?;
+            .ok_or_else(|| value.invalid("empty inner"))?;
+        let kind = kind.try_into()?;
+        let inner_index = inner.try_into()?;
         let visibility = value
             .to_member("visibility")?
             .required()?
             .to_unquoted_string_str()?;
-        let deprecation_index = value.to_member("deprecation")?.try_into()?;
-        let inner_index = value.to_member("inner")?.required()?.try_into()?;
+        let deprecation_index = value.to_member("deprecation")?.required()?.try_into()?;
 
         let is_public = visibility.as_ref() == "public" || matches!(kind, ItemKind::Impl);
         Ok(Self {
