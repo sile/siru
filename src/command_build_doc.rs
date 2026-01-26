@@ -19,7 +19,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
         .env("RUSTDOCFLAGS", "-Z unstable-options --output-format json")
         .args(&["doc"])
         .status()
-        .map_err(|e| format!("Failed to run cargo doc: {}", e))?;
+        .map_err(|e| format!("Failed to run cargo command: {e}"))?;
 
     if !status.success() {
         // Cargo has already printed detailed error messages to stderr.
