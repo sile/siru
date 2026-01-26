@@ -265,6 +265,7 @@ impl<'a> PublicItemCollector<'a> {
         item_value: nojson::RawJsonValue<'a, 'a>,
     ) -> Result<(), nojson::JsonParseError> {
         let item = Item::try_from(item_value)?;
+
         if !item.is_public {
             return Ok(());
         }
@@ -310,9 +311,16 @@ impl<'a> PublicItemCollector<'a> {
                     self.visit_item(path, item_value)?;
                 }
             }
+            ItemKind::Use => {
+                let is_glob: bool = inner.to_member("is_glob")?.required()?.try_into()?;
+                if !is_glob {
+                    let target_id_value = inner.to_member("id")?.required()?;
+                    let target_item_value = self.items.get(self.json, target_id_value)?;
+                    self.visit_item(path, target_item_value)?;
+                }
+            }
             // Leaf items with no children to visit
-            ItemKind::Use
-            | ItemKind::Variant
+            ItemKind::Variant
             | ItemKind::TypeAlias
             | ItemKind::Function
             | ItemKind::Constant
