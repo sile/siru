@@ -1,6 +1,6 @@
 pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
     if !noargs::cmd("build-doc")
-        .doc("Build JSON format documentation")
+        .doc("Build JSON format documentation via rustdoc")
         .take(args)
         .is_present()
     {
