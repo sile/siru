@@ -66,11 +66,12 @@ impl ItemKind {
             ItemKind::Impl => "impl",
         }
     }
+}
 
-    pub fn from_json_value(
-        kind: nojson::RawJsonValue<'_, '_>,
-        item: nojson::RawJsonValue<'_, '_>,
-    ) -> Result<Self, nojson::JsonParseError> {
+impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
+    type Error = nojson::JsonParseError;
+
+    fn try_from(kind: nojson::RawJsonValue<'text, 'raw>) -> Result<Self, Self::Error> {
         match kind.to_unquoted_string_str()?.as_ref() {
             "module" => Ok(ItemKind::Module),
             "use" => Ok(ItemKind::Use),
@@ -85,7 +86,7 @@ impl ItemKind {
             "assoc_const" => Ok(ItemKind::AssocConst),
             "macro" => Ok(ItemKind::Macro),
             "impl" => Ok(ItemKind::Impl),
-            _ => Err(kind.invalid(format!("unknown item kind: item={item}",))),
+            _ => Err(kind.invalid(format!("unknown item kind"))),
         }
     }
 }
@@ -189,10 +190,11 @@ impl CrateDoc {
             .to_object()?
             .next()
             .ok_or_else(|| item.invalid("empty inner"))?;
-        let kind = ItemKind::from_str(kind, item)?;
+        let kind = ItemKind::try_from(kind)?;
 
         match kind {
             ItemKind::Module => self.visit_module(path, item_index, inner.try_into()?)?,
+            _ => todo!(),
         }
 
         Ok(())
