@@ -25,6 +25,21 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         }
     }
 
+    let mut known_crates = std::collections::HashSet::new();
+    for path in doc_file_paths {
+        let text = std::fs::read_to_string(&path)
+            .map_err(|e| format!("failed to read file '{}': {e}", path.display()))?;
+        let doc = crate::doc::CrateDoc::parse(path.clone(), &text)
+            .map_err(|e| crate::json::format_parse_error(&text, e))?;
+
+        if !known_crates.insert(doc.crate_name.clone()) {
+            if verbose {
+                eprintln!("Warning: duplicate crate '{}' ignored", doc.crate_name);
+            }
+            continue;
+        }
+    }
+
     Ok(())
 }
 
