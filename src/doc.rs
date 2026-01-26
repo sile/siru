@@ -156,6 +156,18 @@ impl ItemPath {
     }
 }
 
+impl std::fmt::Display for ItemPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, segment) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, "::")?;
+            }
+            write!(f, "{}", segment)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct CrateItems(std::collections::HashMap<ItemId, JsonValueIndex>);
 
