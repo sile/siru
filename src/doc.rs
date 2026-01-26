@@ -254,6 +254,7 @@ impl<'a> PublicItemCollector<'a> {
 
         if let Some(name) = &item.name {
             path.0.push(name.clone());
+            self.public_items.push((path.clone(), item.clone()));
         }
 
         match item.kind {
@@ -273,15 +274,11 @@ impl<'a> PublicItemCollector<'a> {
         path: &mut ItemPath,
         item: &Item,
     ) -> Result<(), nojson::JsonParseError> {
-        self.public_items.push((path.clone(), item.clone()));
-
         let inner = item.inner(self.json);
-
         for item_id_value in inner.to_member("items")?.required()?.to_array()? {
             let item_value = self.items.get(self.json, item_id_value)?;
             self.visit_item(path, item_value)?;
         }
-
         Ok(())
     }
 }
