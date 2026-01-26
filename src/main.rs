@@ -17,9 +17,9 @@ fn main() -> noargs::Result<()> {
         .is_present();
 
     if ext {
-        let _ = siru::command_build_doc::run(&mut args)?;
+        let _ = siru::command_build_doc::try_run(&mut args)?;
     } else {
-        // run main command
+        siru::command_main::run(&mut args)?;
     }
 
     if let Some(help) = args.finish()? {

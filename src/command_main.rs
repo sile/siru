@@ -1,12 +1,4 @@
-pub fn try_run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
-    if !noargs::cmd("build-doc")
-        .doc("Build JSON format documentation via rustdoc")
-        .take(args)
-        .is_present()
-    {
-        return Ok(false);
-    }
-
+pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     let mut cargo_args = vec!["doc".to_owned()];
     while let Some(a) = noargs::arg("[CARGO_DOC_ARG]...")
         .doc("")
@@ -17,7 +9,7 @@ pub fn try_run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
     }
 
     if args.metadata().help_mode {
-        return Ok(true);
+        return Ok(());
     }
 
     eprintln!(
@@ -37,5 +29,5 @@ pub fn try_run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
         std::process::exit(1);
     }
 
-    Ok(true)
+    Ok(())
 }
