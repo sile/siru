@@ -11,6 +11,9 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<bool> {
         return Ok(true);
     }
 
+    eprintln!(
+        "Running: `$ cargo doc` with RUSTC_BOOTSTRAP=1 and RUSTDOCFLAGS='-Z unstable-options --output-format json'"
+    );
     let status = std::process::Command::new("cargo")
         .env("RUSTC_BOOTSTRAP", "1")
         .env("RUSTDOCFLAGS", "-Z unstable-options --output-format json")
