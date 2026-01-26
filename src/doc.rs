@@ -31,10 +31,69 @@ impl std::fmt::Display for ItemId {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ItemKind {
+    Module,
+    Use,
+    Enum,
+    Variant,
+    Struct,
+    TypeAlias,
+    Function,
+    Constant,
+    Trait,
+    AssocType,
+    AssocConst,
+    Macro,
+    Impl,
+}
+
+impl ItemKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ItemKind::Module => "module",
+            ItemKind::Use => "use",
+            ItemKind::Enum => "enum",
+            ItemKind::Variant => "variant",
+            ItemKind::Struct => "struct",
+            ItemKind::TypeAlias => "type_alias",
+            ItemKind::Function => "function",
+            ItemKind::Constant => "constant",
+            ItemKind::Trait => "trait",
+            ItemKind::AssocType => "assoc_type",
+            ItemKind::AssocConst => "assoc_const",
+            ItemKind::Macro => "macro",
+            ItemKind::Impl => "impl",
+        }
+    }
+
+    pub fn from_json_value(
+        kind: nojson::RawJsonValue<'_, '_>,
+        item: nojson::RawJsonValue<'_, '_>,
+    ) -> Result<Self, nojson::JsonParseError> {
+        match kind.to_unquoted_string_str()?.as_ref() {
+            "module" => Ok(ItemKind::Module),
+            "use" => Ok(ItemKind::Use),
+            "enum" => Ok(ItemKind::Enum),
+            "variant" => Ok(ItemKind::Variant),
+            "struct" => Ok(ItemKind::Struct),
+            "type_alias" => Ok(ItemKind::TypeAlias),
+            "function" => Ok(ItemKind::Function),
+            "constant" => Ok(ItemKind::Constant),
+            "trait" => Ok(ItemKind::Trait),
+            "assoc_type" => Ok(ItemKind::AssocType),
+            "assoc_const" => Ok(ItemKind::AssocConst),
+            "macro" => Ok(ItemKind::Macro),
+            "impl" => Ok(ItemKind::Impl),
+            _ => Err(kind.invalid(format!("unknown item kind: item={item}",))),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PublicItem {
     pub path: ItemPath,
-    pub kind: &'static str,
+    pub kind: ItemKind,
     pub index: JsonValueIndex,
 }
 
@@ -130,10 +189,22 @@ impl CrateDoc {
             .to_object()?
             .next()
             .ok_or_else(|| item.invalid("empty inner"))?;
+        let kind = ItemKind::from_str(kind, item)?;
 
-        match kind.to_unquoted_string_str()?.as_ref() {
-            // "module" => self.visit_module(path, item)?,
-            _ => Err(kind.invalid(format!("unknown item kind: item={item}"))),
+        match kind {
+            ItemKind::Module => self.visit_module(path, item_index, inner.try_into()?)?,
         }
+
+        Ok(())
+    }
+
+    fn visit_module(
+        &mut self,
+        path: &mut ItemPath,
+        _item_index: JsonValueIndex,
+        _inner_index: JsonValueIndex,
+    ) -> Result<(), nojson::JsonParseError> {
+        // TODO: implement module visiting
+        Ok(())
     }
 }
