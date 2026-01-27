@@ -47,6 +47,7 @@ pub enum ItemKind {
     AssocConst,
     Macro,
     Impl,
+    Primitive,
 }
 
 impl std::fmt::Display for ItemKind {
@@ -94,6 +95,7 @@ impl ItemKind {
             ItemKind::AssocConst => "const",
             ItemKind::Macro => "macro",
             ItemKind::Impl => "impl",
+            ItemKind::Primitive => "primitive",
         }
     }
 
@@ -113,6 +115,7 @@ impl ItemKind {
             ItemKind::AssocConst => "assoc_const",
             ItemKind::Macro => "macro",
             ItemKind::Impl => "impl",
+            ItemKind::Primitive => "primitive",
         }
     }
 }
@@ -136,6 +139,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "assoc_const" => Ok(ItemKind::AssocConst),
             "macro" => Ok(ItemKind::Macro),
             "impl" => Ok(ItemKind::Impl),
+            "primitive" => Ok(ItemKind::Primitive),
             _ => Err(kind.invalid(format!("unknown item kind"))),
         }
     }
@@ -413,7 +417,8 @@ impl<'a> PublicItemCollector<'a> {
             | ItemKind::Constant
             | ItemKind::AssocType
             | ItemKind::AssocConst
-            | ItemKind::Macro => {}
+            | ItemKind::Macro
+            | ItemKind::Primitive => {}
         }
 
         if item.name.is_some() {
