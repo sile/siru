@@ -11,6 +11,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     let mut target_crates = std::collections::HashSet::new();
     while let Some(a) = noargs::opt("crate")
         .short('c')
+        .ty("CRATE_NAME")
         .doc("TODO")
         .take(args)
         .present()
@@ -21,8 +22,8 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     let mut target_kinds = std::collections::HashSet::new();
     while let Some(kinds) = noargs::opt("kind")
         .short('k')
-        .ty("KIND")
-        .doc("Filter items by kind")
+        .ty(crate::doc::ItemKind::KEYWORDS)
+        .doc("TODO")
         .take(args)
         .present_and_then(|a| {
             crate::doc::ItemKind::parse_keyword_str(a.value()).ok_or_else(|| "TODO")

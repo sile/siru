@@ -56,10 +56,11 @@ impl std::fmt::Display for ItemKind {
 }
 
 impl ItemKind {
+    pub const KEYWORDS: &'static str = "mod|enum|variant|struct|field|type|fn|const|trait|macro";
+
     pub fn parse_keyword_str(s: &str) -> Option<Vec<Self>> {
         match s {
             "mod" => Some(vec![ItemKind::Module]),
-            "use" => Some(vec![ItemKind::Use]),
             "enum" => Some(vec![ItemKind::Enum]),
             "variant" => Some(vec![ItemKind::Variant]),
             "struct" => Some(vec![ItemKind::Struct]),
@@ -69,7 +70,9 @@ impl ItemKind {
             "const" => Some(vec![ItemKind::Constant, ItemKind::AssocConst]),
             "trait" => Some(vec![ItemKind::Trait]),
             "macro" => Some(vec![ItemKind::Macro]),
-            "impl" => Some(vec![ItemKind::Impl]),
+            // NOTE: Filters out unnamed items
+            // "use" => Some(vec![ItemKind::Use]),
+            // "impl" => Some(vec![ItemKind::Impl]),
             _ => None,
         }
     }
