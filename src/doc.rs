@@ -185,7 +185,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
 }
 
 impl Item {
-    fn inner<'a>(&self, json: &'a nojson::RawJsonOwned) -> nojson::RawJsonValue<'a, 'a> {
+    pub fn inner<'a>(&self, json: &'a nojson::RawJsonOwned) -> nojson::RawJsonValue<'a, 'a> {
         json.get_value_by_index(self.inner_index.get())
             .expect("bug")
     }

@@ -268,6 +268,8 @@ fn print_detail<W: std::io::Write>(
     for (path, item) in &doc.show_items {
         writeln!(writer, "# [{}] `{}`\n", item.kind.as_keyword_str(), path)?;
 
+        print_item_signature(writer, doc, item)?;
+
         if let Some(deprecation_note) = item.deprecation_note(&doc.json)? {
             if !deprecation_note.is_empty() {
                 writeln!(writer, "**Deprecated**: {}\n", deprecation_note)?;
@@ -282,8 +284,80 @@ fn print_detail<W: std::io::Write>(
             writeln!(writer, "{}\n", increased_headings)?;
         }
 
+        // todo: print item additional info such as trait impls
+
         writeln!(writer)?;
     }
 
     Ok(())
+}
+
+fn print_item_signature<W: std::io::Write>(
+    writer: &mut W,
+    doc: &crate::doc::CrateDoc,
+    item: &crate::doc::Item,
+) -> Result<(), PrintError> {
+    let inner = item.inner(&doc.json);
+
+    let signature = match item.kind {
+        crate::doc::ItemKind::Function => format_function_signature(inner)?,
+        crate::doc::ItemKind::Struct => format_struct_signature(item, inner)?,
+        crate::doc::ItemKind::Enum => format_enum_signature(item, inner)?,
+        crate::doc::ItemKind::Trait => format_trait_signature(item, inner)?,
+        crate::doc::ItemKind::TypeAlias => format_type_alias_signature(item, inner)?,
+        crate::doc::ItemKind::Constant | crate::doc::ItemKind::AssocConst => {
+            format_const_signature(item, inner)?
+        }
+        _ => return Ok(()), // Other kinds may not need signatures
+    };
+
+    if !signature.is_empty() {
+        writeln!(writer, "```rust\n{}\n```\n", signature)?;
+    }
+    Ok(())
+}
+
+fn format_function_signature(inner: nojson::RawJsonValue) -> Result<String, PrintError> {
+    // Extract function signature details from the inner JSON
+    Ok(format!("fn {}", "TODO: extract signature"))
+}
+
+fn format_struct_signature(
+    item: &crate::doc::Item,
+    inner: nojson::RawJsonValue,
+) -> Result<String, PrintError> {
+    let name = item.name.as_ref().map(|s| s.as_str()).unwrap_or("?");
+    Ok(format!("struct {}", name))
+}
+
+fn format_enum_signature(
+    item: &crate::doc::Item,
+    inner: nojson::RawJsonValue,
+) -> Result<String, PrintError> {
+    let name = item.name.as_ref().map(|s| s.as_str()).unwrap_or("?");
+    Ok(format!("enum {}", name))
+}
+
+fn format_trait_signature(
+    item: &crate::doc::Item,
+    inner: nojson::RawJsonValue,
+) -> Result<String, PrintError> {
+    let name = item.name.as_ref().map(|s| s.as_str()).unwrap_or("?");
+    Ok(format!("trait {}", name))
+}
+
+fn format_type_alias_signature(
+    item: &crate::doc::Item,
+    inner: nojson::RawJsonValue,
+) -> Result<String, PrintError> {
+    let name = item.name.as_ref().map(|s| s.as_str()).unwrap_or("?");
+    Ok(format!("type {}", name))
+}
+
+fn format_const_signature(
+    item: &crate::doc::Item,
+    inner: nojson::RawJsonValue,
+) -> Result<String, PrintError> {
+    let name = item.name.as_ref().map(|s| s.as_str()).unwrap_or("?");
+    Ok(format!("const {}", name))
 }
