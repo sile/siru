@@ -92,9 +92,8 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
                 eprintln!("  [{}] {}", item.kind, path);
             }
         }
-        if !doc.show_items.is_empty() {
-            docs.push(doc);
-        }
+
+        docs.push(doc);
     }
 
     print_summary(&docs);
@@ -153,6 +152,10 @@ fn print_summary(docs: &[crate::doc::CrateDoc]) {
     println!();
 
     for doc in docs {
+        if doc.show_items.is_empty() {
+            continue;
+        }
+
         println!("## Crate: `{}`\n", doc.crate_name);
 
         // Calculate the longest kind keyword for padding
