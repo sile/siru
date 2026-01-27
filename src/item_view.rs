@@ -51,7 +51,9 @@ fn format_type(
     if let Some(generic) = ty.to_member("generic")?.get() {
         // {"generic":"Self"}
         Ok(generic.try_into()?)
-    } else if let Some(resolved) = ty.to_member("resolved_path")?.get() {
+    } else if let Some(resolved) = ty.to_member("resolved_path")?.get()
+        && resolved.to_member("args")?.required()?.kind().is_null()
+    {
         // {"resolved_path":{"path":"FlagSpec","id":323,"args":null}}
         let path: String = resolved.to_member("path")?.required()?.try_into()?;
         Ok(path)
