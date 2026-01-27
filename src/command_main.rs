@@ -306,8 +306,13 @@ fn print_item_signature<W: std::io::Write>(
         crate::doc::ItemKind::Enum => format_enum_signature(item, inner)?,
         crate::doc::ItemKind::Trait => format_trait_signature(item, inner)?,
         crate::doc::ItemKind::TypeAlias => format_type_alias_signature(item, inner)?,
-        crate::doc::ItemKind::Constant | crate::doc::ItemKind::AssocConst => {
-            format_const_signature(item, inner)?
+        crate::doc::ItemKind::Constant => {
+            let view = crate::item_view::ConstantView::new(doc, item);
+            format_const_signature(&view)?
+        }
+        crate::doc::ItemKind::AssocConst => {
+            let view = crate::item_view::AssocConstView::new(doc, item);
+            format_assoc_const_signature(&view)?
         }
         _ => return Ok(()), // Other kinds may not need signatures
     };
@@ -355,10 +360,12 @@ fn format_type_alias_signature(
     Ok(format!("type {}", name))
 }
 
-fn format_const_signature(
-    item: &crate::doc::Item,
-    inner: nojson::RawJsonValue,
+fn format_const_signature(view: &crate::item_view::ConstantView) -> Result<String, PrintError> {
+    Ok(format!("const {}", view.name()))
+}
+
+fn format_assoc_const_signature(
+    view: &crate::item_view::AssocConstView,
 ) -> Result<String, PrintError> {
-    let name = item.name.as_ref().expect("bug");
-    Ok(format!("const {}", name))
+    Ok(format!("const {}", view.name()))
 }
