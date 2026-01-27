@@ -86,9 +86,8 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         }
         if !target_path_parts.is_empty() {
             doc.public_items.retain(|(path, _)| {
-                target_path_parts
-                    .iter()
-                    .all(|part| path.0.iter().any(|segment| segment.contains(part)))
+                let path = path.to_string();
+                target_path_parts.iter().all(|part| path.contains(part))
             });
         }
         if verbose {
