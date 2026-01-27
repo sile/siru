@@ -32,8 +32,15 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         target_kinds.extend(kinds);
     }
 
-    let verbose = noargs::flag("verbose")
+    let view_command = noargs::opt("view-command")
         .short('v')
+        .ty("COMMAND")
+        .doc("Shell command to pipe output through (e.g., less, bat -lmd)")
+        .env("SIRU_VIEW_COMMAND")
+        .take(args)
+        .present_and_then(|o| o.value().parse::<String>())?;
+
+    let verbose = noargs::flag("verbose")
         .doc("Enable verbose output")
         .take(args)
         .is_present();
@@ -96,9 +103,28 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         docs.push(doc);
     }
 
-    let stdout = std::io::stdout();
-    let mut writer = stdout.lock();
-    let _ = print_summary(&docs, &mut writer);
+    if let Some(cmd) = view_command {
+        use std::process::{Command, Stdio};
+
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
+
+        let mut child = Command::new(&shell)
+            .arg("-c")
+            .arg(&cmd)
+            .stdin(Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("failed to spawn shell '{}': {}", shell, e))?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            let _ = print_summary(&docs, &mut stdin);
+        }
+
+        let _ = child.wait();
+    } else {
+        let stdout = std::io::stdout();
+        let mut writer = stdout.lock();
+        let _ = print_summary(&docs, &mut writer);
+    }
 
     for _doc in docs {
         //
