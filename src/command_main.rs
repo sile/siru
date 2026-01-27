@@ -32,24 +32,20 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         target_kinds.extend(kinds);
     }
 
-    let mut target_path_parts = Vec::new();
-    loop {
-        let part = noargs::arg("[ITEM_PATH_PART]")
-            .doc("Filter items to only those having all specified path parts")
-            .take(args)
-            .present_and_then(|a| a.value().parse::<String>())?;
-
-        match part {
-            Some(p) => target_path_parts.push(p),
-            None => break,
-        }
-    }
-
     let verbose = noargs::flag("verbose")
         .short('v')
         .doc("Enable verbose output")
         .take(args)
         .is_present();
+
+    let mut target_path_parts = Vec::new();
+    while let Some(part) = noargs::arg("[ITEM_PATH_PART]")
+        .doc("Filter items to only those having all specified path parts")
+        .take(args)
+        .present_and_then(|a| a.value().parse::<String>())?
+    {
+        target_path_parts.push(part);
+    }
 
     if args.metadata().help_mode {
         return Ok(());
