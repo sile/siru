@@ -36,6 +36,7 @@ pub enum ItemKind {
     Module,
     Use,
     Enum,
+    Union,
     Variant,
     Struct,
     StructField,
@@ -58,12 +59,14 @@ impl std::fmt::Display for ItemKind {
 }
 
 impl ItemKind {
-    pub const KEYWORDS: &'static str = "mod|enum|variant|struct|field|type|fn|const|trait|macro";
+    pub const KEYWORDS: &'static str =
+        "mod|enum|union|variant|struct|field|type|fn|const|trait|macro";
 
     pub fn parse_keyword_str(s: &str) -> Option<Vec<Self>> {
         match s {
             "mod" => Some(vec![ItemKind::Module]),
             "enum" => Some(vec![ItemKind::Enum]),
+            "union" => Some(vec![ItemKind::Union]),
             "variant" => Some(vec![ItemKind::Variant]),
             "struct" => Some(vec![ItemKind::Struct]),
             "field" => Some(vec![ItemKind::StructField]),
@@ -85,6 +88,7 @@ impl ItemKind {
             ItemKind::Module => "mod",
             ItemKind::Use => "use",
             ItemKind::Enum => "enum",
+            ItemKind::Union => "union",
             ItemKind::Variant => "variant",
             ItemKind::Struct => "struct",
             ItemKind::StructField => "field",
@@ -106,6 +110,7 @@ impl ItemKind {
             ItemKind::Module => "module",
             ItemKind::Use => "use",
             ItemKind::Enum => "enum",
+            ItemKind::Union => "union",
             ItemKind::Variant => "variant",
             ItemKind::Struct => "struct",
             ItemKind::StructField => "struct_field",
@@ -131,6 +136,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "module" => Ok(ItemKind::Module),
             "use" => Ok(ItemKind::Use),
             "enum" => Ok(ItemKind::Enum),
+            "union" => Ok(ItemKind::Union),
             "variant" => Ok(ItemKind::Variant),
             "struct" => Ok(ItemKind::Struct),
             "struct_field" => Ok(ItemKind::StructField),
@@ -371,6 +377,22 @@ impl<'a> PublicItemCollector<'a> {
                     let item_value = self.items.get(self.json, item_id_value)?;
                     self.visit_item(path, item_value, false)?;
                 }
+                for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value, false)?;
+                }
+            }
+            ItemKind::Union => {
+                let kind_value = inner.to_member("kind")?.required()?;
+                if let Some((kind, plain)) = kind_value.to_object().ok().and_then(|mut o| o.next())
+                    && kind.to_unquoted_string_str()? == "plain"
+                {
+                    for field_id_value in plain.to_member("fields")?.required()?.to_array()? {
+                        let field_value = self.items.get(self.json, field_id_value)?;
+                        self.visit_item(path, field_value, false)?;
+                    }
+                }
+
                 for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
                     self.visit_item(path, item_value, false)?;
