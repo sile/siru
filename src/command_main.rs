@@ -118,6 +118,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             .take()
             .ok_or("failed to get child process stdin")?;
         let result = print_output(&mut stdin, &docs);
+        std::mem::drop(stdin);
         let _ = child.wait();
         result
     } else {
@@ -217,9 +218,7 @@ fn print_summary<W: std::io::Write>(
     writer: &mut W,
     docs: &[crate::doc::CrateDoc],
 ) -> std::io::Result<()> {
-    writeln!(writer, "# Documentation Summary\n")?;
-
-    writeln!(writer, "## Crates Overview\n")?;
+    writeln!(writer, "# Crates Overview\n")?;
     for doc in docs {
         writeln!(
             writer,
@@ -236,7 +235,7 @@ fn print_summary<W: std::io::Write>(
             continue;
         }
 
-        writeln!(writer, "## Crate: `{}`\n", doc.crate_name)?;
+        writeln!(writer, "# Crate Items: `{}`\n", doc.crate_name)?;
 
         // Calculate the longest kind keyword for padding
         let max_kind_len = doc
@@ -266,16 +265,8 @@ fn print_detail<W: std::io::Write>(
     writer: &mut W,
     doc: &crate::doc::CrateDoc,
 ) -> Result<(), PrintError> {
-    writeln!(writer, "## Details: `{}`\n", doc.crate_name)?;
-
     for (path, item) in &doc.show_items {
-        writeln!(
-            writer,
-            "### [{:<width$}] `{}`\n",
-            item.kind.as_keyword_str(),
-            path,
-            width = item.kind.as_keyword_str().len()
-        )?;
+        writeln!(writer, "# [{}] `{}`\n", item.kind.as_keyword_str(), path,)?;
 
         // TODO: Add more detailed information about each item
         // This might include documentation, signature, examples, etc.
