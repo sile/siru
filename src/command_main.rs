@@ -32,7 +32,18 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         target_kinds.extend(kinds);
     }
 
-    // TODO:   [ITEM_PATH_PART]... (filter items to which only having all parts)
+    let mut target_path_parts = Vec::new();
+    loop {
+        let part = noargs::arg("[ITEM_PATH_PART]")
+            .doc("Filter items to only those having all specified path parts")
+            .take(args)
+            .present_and_then(|a| a.value().parse::<String>())?;
+
+        match part {
+            Some(p) => target_path_parts.push(p),
+            None => break,
+        }
+    }
 
     let verbose = noargs::flag("verbose")
         .short('v')
@@ -72,6 +83,13 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         if !target_kinds.is_empty() {
             doc.public_items
                 .retain(|(_, item)| target_kinds.contains(&item.kind));
+        }
+        if !target_path_parts.is_empty() {
+            doc.public_items.retain(|(path, _)| {
+                target_path_parts
+                    .iter()
+                    .all(|part| path.0.iter().any(|segment| segment.contains(part)))
+            });
         }
         if verbose {
             eprintln!("Public items in crate '{}':", doc.crate_name);
