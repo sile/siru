@@ -146,6 +146,7 @@ pub struct Item {
     pub name: Option<String>,
     pub kind: ItemKind,
     pub is_public: bool,
+    pub docs_index: Option<JsonValueIndex>,
     pub deprecation_index: Option<JsonValueIndex>,
     pub inner_index: JsonValueIndex,
 }
@@ -167,6 +168,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
             .to_member("visibility")?
             .required()?
             .to_unquoted_string_str()?;
+        let docs_index = value.to_member("docs")?.required()?.try_into()?;
         let deprecation_index = value.to_member("deprecation")?.required()?.try_into()?;
 
         let is_public =
@@ -175,6 +177,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
             name,
             kind,
             is_public,
+            docs_index,
             deprecation_index,
             inner_index,
         })

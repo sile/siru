@@ -266,7 +266,7 @@ fn print_detail<W: std::io::Write>(
     doc: &crate::doc::CrateDoc,
 ) -> Result<(), PrintError> {
     for (path, item) in &doc.show_items {
-        writeln!(writer, "# [{}] `{}`\n", item.kind.as_keyword_str(), path,)?;
+        writeln!(writer, "# [{}] `{}`\n", item.kind.as_keyword_str(), path)?;
 
         // TODO: Add more detailed information about each item
         // This might include documentation, signature, examples, etc.
