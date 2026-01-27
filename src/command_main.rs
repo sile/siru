@@ -141,7 +141,7 @@ fn collect_doc_file_paths(
 fn print_summary(docs: &[crate::doc::CrateDoc]) {
     println!("# Documentation Summary\n");
 
-    println!("## Overview\n");
+    println!("## Crates Overview\n");
     for doc in docs {
         println!(
             "- `{}` ({} public items, {} items to show)",
