@@ -46,6 +46,7 @@ pub enum ItemKind {
     AssocType,
     AssocConst,
     Macro,
+    ProcMacro,
     Impl,
     Primitive,
 }
@@ -94,6 +95,7 @@ impl ItemKind {
             ItemKind::AssocType => "type",
             ItemKind::AssocConst => "const",
             ItemKind::Macro => "macro",
+            ItemKind::ProcMacro => "proc_macro",
             ItemKind::Impl => "impl",
             ItemKind::Primitive => "primitive",
         }
@@ -114,6 +116,7 @@ impl ItemKind {
             ItemKind::AssocType => "assoc_type",
             ItemKind::AssocConst => "assoc_const",
             ItemKind::Macro => "macro",
+            ItemKind::ProcMacro => "proc_macro",
             ItemKind::Impl => "impl",
             ItemKind::Primitive => "primitive",
         }
@@ -138,6 +141,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "assoc_type" => Ok(ItemKind::AssocType),
             "assoc_const" => Ok(ItemKind::AssocConst),
             "macro" => Ok(ItemKind::Macro),
+            "proc_macro" => Ok(ItemKind::ProcMacro),
             "impl" => Ok(ItemKind::Impl),
             "primitive" => Ok(ItemKind::Primitive),
             _ => Err(kind.invalid(format!("unknown item kind"))),
@@ -418,6 +422,7 @@ impl<'a> PublicItemCollector<'a> {
             | ItemKind::AssocType
             | ItemKind::AssocConst
             | ItemKind::Macro
+            | ItemKind::ProcMacro
             | ItemKind::Primitive => {}
         }
 
