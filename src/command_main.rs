@@ -32,7 +32,8 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         target_kinds.extend(kinds);
     }
 
-    // TODO:   <ITEM_NAME_PART>...
+    // TODO:   [ITEM_PATH_PART]... (filter items to which only having all parts)
+
     let verbose = noargs::flag("verbose")
         .short('v')
         .doc("Enable verbose output")
