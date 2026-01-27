@@ -400,8 +400,9 @@ impl<'a> PublicItemCollector<'a> {
                 let is_glob: bool = inner.to_member("is_glob")?.required()?.try_into()?;
                 if !is_glob {
                     let target_id_value = inner.to_member("id")?.required()?;
-                    let target_item_value = self.items.get(self.json, target_id_value)?;
-                    self.visit_item(path, target_item_value, false)?;
+                    if let Ok(target_item_value) = self.items.get(self.json, target_id_value) {
+                        self.visit_item(path, target_item_value, false)?;
+                    }
                 }
             }
             // Leaf items with no children to visit
