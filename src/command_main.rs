@@ -103,7 +103,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         docs.push(doc);
     }
 
-    if let Some(cmd) = view_command {
+    let result = if let Some(cmd) = view_command {
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
 
         let mut child = std::process::Command::new(&shell)
@@ -113,17 +113,22 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             .spawn()
             .map_err(|e| format!("failed to spawn shell '{}': {}", shell, e))?;
 
-        if let Some(mut stdin) = child.stdin.take() {
-            let _ = print_output(&mut stdin, &docs);
-        }
-
+        let mut stdin = child
+            .stdin
+            .take()
+            .ok_or("failed to get child process stdin")?;
+        let result = print_output(&mut stdin, &docs);
         let _ = child.wait();
+        result
     } else {
         let stdout = std::io::stdout();
         let mut writer = stdout.lock();
-        let _ = print_output(&mut writer, &docs);
-    }
+        print_output(&mut writer, &docs)
+    };
 
+    if let Err(PrintError::Json { error, text }) = result {
+        return Err(crate::json::format_parse_error(&text, error).into());
+    }
     Ok(())
 }
 
@@ -159,10 +164,33 @@ fn collect_doc_file_paths(
     Ok(file_paths)
 }
 
+enum PrintError {
+    Io, // Output errors are ignored
+    Json {
+        error: nojson::JsonParseError,
+        text: String,
+    },
+}
+
+impl From<std::io::Error> for PrintError {
+    fn from(_err: std::io::Error) -> Self {
+        PrintError::Io
+    }
+}
+
+impl From<nojson::JsonParseError> for PrintError {
+    fn from(err: nojson::JsonParseError) -> Self {
+        PrintError::Json {
+            error: err,
+            text: String::new(),
+        }
+    }
+}
+
 fn print_output<W: std::io::Write>(
     writer: &mut W,
     docs: &[crate::doc::CrateDoc],
-) -> std::io::Result<()> {
+) -> Result<(), PrintError> {
     print_summary(writer, docs)?;
     for doc in docs {
         if doc.show_items.is_empty() {
