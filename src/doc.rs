@@ -383,16 +383,10 @@ impl<'a> PublicItemCollector<'a> {
                 }
             }
             ItemKind::Union => {
-                let kind_value = inner.to_member("kind")?.required()?;
-                if let Some((kind, plain)) = kind_value.to_object().ok().and_then(|mut o| o.next())
-                    && kind.to_unquoted_string_str()? == "plain"
-                {
-                    for field_id_value in plain.to_member("fields")?.required()?.to_array()? {
-                        let field_value = self.items.get(self.json, field_id_value)?;
-                        self.visit_item(path, field_value, false)?;
-                    }
+                for item_id_value in inner.to_member("fields")?.required()?.to_array()? {
+                    let item_value = self.items.get(self.json, item_id_value)?;
+                    self.visit_item(path, item_value, false)?;
                 }
-
                 for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
                     self.visit_item(path, item_value, false)?;
