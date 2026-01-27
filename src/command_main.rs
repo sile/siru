@@ -94,9 +94,10 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             });
         }
         if verbose {
-            eprintln!("Public items in crate '{}':", doc.crate_name);
+            eprintln!("Items in crate '{}':", doc.crate_name);
             for (path, item) in &doc.show_items {
-                eprintln!("  [{}] {}", item.kind, path);
+                let inner = item.inner(&doc.json);
+                eprintln!("  [{}] {}: {}", item.kind, path, inner);
             }
         }
 
