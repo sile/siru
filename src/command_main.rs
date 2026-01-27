@@ -314,6 +314,7 @@ fn print_item_signature<W: std::io::Write>(
             let view = crate::item_view::AssocConstView::new(doc, item);
             format_assoc_const_signature(&view)?
         }
+        // todo: primitive
         _ => return Ok(()), // Other kinds may not need signatures
     };
 
