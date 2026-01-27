@@ -19,6 +19,18 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     }
 
     // TODO: --kind, --crate, <ITEM_NAME_PART>...
+    let mut target_kinds = std::collections::HashSet::new();
+    while let Some(a) = noargs::opt("kind")
+        .short('k')
+        .ty("KIND")
+        .doc("Filter items by kind (e.g., function, struct, trait, etc.)")
+        .take(args)
+        .present()
+    {
+        target_kinds.insert(a.value().to_owned());
+    }
+
+    // TODO: --kind,  <ITEM_NAME_PART>...
     let verbose = noargs::flag("verbose")
         .short('v')
         .doc("Enable verbose output")
@@ -42,10 +54,10 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     for path in doc_file_paths {
         let text = std::fs::read_to_string(&path)
             .map_err(|e| format!("failed to read file '{}': {e}", path.display()))?;
-        let doc = crate::doc::CrateDoc::parse(path, &text)
+        let mut doc = crate::doc::CrateDoc::parse(path, &text)
             .map_err(|e| crate::json::format_parse_error(&text, e))?;
 
-        if !target_crates.contains(&doc.crate_name) {
+        if !target_crates.is_empty() && !target_crates.contains(&doc.crate_name) {
             continue;
         }
         if !known_crates.insert(doc.crate_name.clone()) {
@@ -53,6 +65,11 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
                 eprintln!("Warning: duplicate crate '{}' ignored", doc.crate_name);
             }
             continue;
+        }
+
+        if !target_kinds.is_empty() {
+            doc.public_items
+                .retain(|(_, item)| target_kinds.contains(item.kind.as_str()));
         }
 
         if verbose {
