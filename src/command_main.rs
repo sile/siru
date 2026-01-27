@@ -268,8 +268,18 @@ fn print_detail<W: std::io::Write>(
     for (path, item) in &doc.show_items {
         writeln!(writer, "# [{}] `{}`\n", item.kind.as_keyword_str(), path)?;
 
-        // TODO: Add more detailed information about each item
-        // This might include documentation, signature, examples, etc.
+        if let Some(deprecation_note) = item.deprecation_note(&doc.json)? {
+            if !deprecation_note.is_empty() {
+                writeln!(writer, "**Deprecated**: {}\n", deprecation_note)?;
+            } else {
+                writeln!(writer, "**Deprecated**\n")?;
+            }
+        }
+
+        if let Some(docs) = item.docs(&doc.json)? {
+            writeln!(writer, "{}\n", docs)?;
+        }
+
         writeln!(writer)?;
     }
 
