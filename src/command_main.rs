@@ -326,8 +326,47 @@ fn format_struct_signature(
     item: &crate::doc::Item,
     inner: nojson::RawJsonValue,
 ) -> Result<String, PrintError> {
-    let name = item.name.as_ref().map(|s| s.as_str()).unwrap_or("?");
-    Ok(format!("struct {}", name))
+    let name = item.name.as_ref().expect("bug");
+
+    // Extract generics
+    let generics_str = inner
+        .to_member("generics")?
+        .get()
+        .and_then(|g| {
+            g.to_member("params")
+                .ok()?
+                .get()
+                .and_then(|params| params.to_array().ok())
+                .map(|_| g) // Just check if params exist
+        })
+        .and_then(|g| g.to_member("params").ok()?.get().map(|p| p))
+        .map(|_| String::new()) // TODO: parse generic params properly
+        .unwrap_or_default();
+
+    // Extract fields from plain struct kind
+    let fields_str = inner
+        .to_member("kind")?
+        .get()
+        .and_then(|k| k.to_member("plain").ok()?.get())
+        .and_then(|p| p.to_member("fields").ok()?.get())
+        .and_then(|f| f.to_array().ok())
+        .map(|mut fields| {
+            let count = fields.count();
+            if count > 0 {
+                format!(" {{ /* {} fields */ }}", count)
+            } else {
+                String::new()
+            }
+        })
+        .unwrap_or_default();
+
+    let generics_part = if generics_str.is_empty() {
+        String::new()
+    } else {
+        format!("<{}>", generics_str)
+    };
+
+    Ok(format!("struct {}{}{}", name, generics_part, fields_str))
 }
 
 fn format_enum_signature(
