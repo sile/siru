@@ -61,7 +61,11 @@ fn format_type(
         // {"primitive":"bool"}
         Ok(primitive.try_into()?)
     } else if let Some(borrowed_ref) = ty.to_member("borrowed_ref")?.get()
-        && borrowed_ref.to_member("lifetime")?.required()?.kind().is_null()
+        && borrowed_ref
+            .to_member("lifetime")?
+            .required()?
+            .kind()
+            .is_null()
     {
         // {"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}}
         let is_mutable: bool = borrowed_ref
@@ -72,6 +76,13 @@ fn format_type(
         let inner_formatted = format_type(inner_type, doc)?;
         let prefix = if is_mutable { "&mut " } else { "&" };
         Ok(format!("{}{}", prefix, inner_formatted))
+    } else if let Some(tuple) = ty.to_member("tuple")?.get() {
+        // {"tuple":[{"primitive":"u8"},{"primitive":"u8"},{"primitive":"u8"}]}
+        let mut formatted_types = Vec::new();
+        for element_type in tuple.to_array()? {
+            formatted_types.push(format_type(element_type, doc)?);
+        }
+        Ok(format!("({})", formatted_types.join(", ")))
     } else {
         // Fallback: return the raw JSON representation
         Ok(ty.to_string())
