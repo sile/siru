@@ -246,7 +246,8 @@ pub struct CrateDoc {
     pub crate_name: String,
     pub items: CrateItems,
     pub root_module_index: JsonValueIndex,
-    pub public_items: Vec<(ItemPath, Item)>,
+    pub show_items: Vec<(ItemPath, Item)>,
+    pub public_item_count: usize,
 }
 
 impl CrateDoc {
@@ -267,7 +268,8 @@ impl CrateDoc {
             crate_name,
             items,
             root_module_index,
-            public_items: Vec::new(),
+            show_items: Vec::new(),
+            public_item_count: 0,
         };
         let mut collector = PublicItemCollector::new(&this.json, &this.items);
         let root_module_value = this
@@ -275,7 +277,8 @@ impl CrateDoc {
             .get_value_by_index(this.root_module_index.get())
             .expect("bug");
         collector.collect(root_module_value)?;
-        this.public_items = collector.public_items;
+        this.show_items = collector.public_items;
+        this.public_item_count = this.show_items.len();
         Ok(this)
     }
 }

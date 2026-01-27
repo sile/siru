@@ -77,27 +77,27 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             continue;
         }
         if !target_kinds.is_empty() {
-            doc.public_items
+            doc.show_items
                 .retain(|(_, item)| target_kinds.contains(&item.kind));
         }
         if !target_path_parts.is_empty() {
-            doc.public_items.retain(|(path, _)| {
+            doc.show_items.retain(|(path, _)| {
                 let path = path.to_string();
                 target_path_parts.iter().all(|part| path.contains(part))
             });
         }
         if verbose {
             eprintln!("Public items in crate '{}':", doc.crate_name);
-            for (path, item) in &doc.public_items {
+            for (path, item) in &doc.show_items {
                 eprintln!("  [{}] {}", item.kind, path);
             }
         }
-        if !doc.public_items.is_empty() {
+        if !doc.show_items.is_empty() {
             docs.push(doc);
         }
     }
 
-    // show summary
+    print_summary(&docs);
 
     for _doc in docs {
         //
@@ -136,4 +136,42 @@ fn collect_doc_file_paths(
     }
 
     Ok(file_paths)
+}
+
+fn print_summary(docs: &[crate::doc::CrateDoc]) {
+    println!("# Documentation Summary\n");
+
+    println!("## Overview\n");
+    for doc in docs {
+        println!(
+            "- `{}` ({} public items, {} items to show)",
+            doc.crate_name,
+            doc.public_item_count,
+            doc.show_items.len()
+        );
+    }
+    println!();
+
+    for doc in docs {
+        println!("## Crate: `{}`\n", doc.crate_name);
+
+        // Calculate the longest kind keyword for padding
+        let max_kind_len = doc
+            .show_items
+            .iter()
+            .map(|(_, item)| item.kind.as_keyword_str().len())
+            .max()
+            .unwrap_or(0);
+
+        for (path, item) in &doc.show_items {
+            println!(
+                "- [{:<width$}] `{}`",
+                item.kind.as_keyword_str(),
+                path,
+                width = max_kind_len
+            );
+        }
+
+        println!();
+    }
 }
