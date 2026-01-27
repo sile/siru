@@ -114,14 +114,14 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             .map_err(|e| format!("failed to spawn shell '{}': {}", shell, e))?;
 
         if let Some(mut stdin) = child.stdin.take() {
-            let _ = print_output(&docs, &mut stdin);
+            let _ = print_output(&mut stdin, &docs);
         }
 
         let _ = child.wait();
     } else {
         let stdout = std::io::stdout();
         let mut writer = stdout.lock();
-        let _ = print_output(&docs, &mut writer);
+        let _ = print_output(&mut writer, &docs);
     }
 
     Ok(())
@@ -160,15 +160,21 @@ fn collect_doc_file_paths(
 }
 
 fn print_output<W: std::io::Write>(
-    docs: &[crate::doc::CrateDoc],
     writer: &mut W,
+    docs: &[crate::doc::CrateDoc],
 ) -> std::io::Result<()> {
-    print_summary(docs, writer)
+    print_summary(writer, docs)?;
+    for doc in docs {
+        if doc.show_items.is_empty() {
+            continue;
+        }
+    }
+    Ok(())
 }
 
 fn print_summary<W: std::io::Write>(
-    docs: &[crate::doc::CrateDoc],
     writer: &mut W,
+    docs: &[crate::doc::CrateDoc],
 ) -> std::io::Result<()> {
     writeln!(writer, "# Documentation Summary\n")?;
 
