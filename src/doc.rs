@@ -369,8 +369,8 @@ impl<'a> PublicItemCollector<'a> {
                 }
             }
             ItemKind::Struct => {
-                if let Some((kind, plain)) =
-                    inner.to_member("kind")?.required()?.to_object()?.next()
+                let kind_value = inner.to_member("kind")?.required()?;
+                if let Some((kind, plain)) = kind_value.to_object().ok().and_then(|mut o| o.next())
                     && kind.to_unquoted_string_str()? == "plain"
                 {
                     for field_id_value in plain.to_member("fields")?.required()?.to_array()? {
