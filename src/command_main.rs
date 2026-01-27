@@ -18,19 +18,20 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         target_crates.insert(a.value().to_owned());
     }
 
-    // TODO: --kind, --crate, <ITEM_NAME_PART>...
     let mut target_kinds = std::collections::HashSet::new();
-    while let Some(a) = noargs::opt("kind")
+    while let Some(kinds) = noargs::opt("kind")
         .short('k')
         .ty("KIND")
-        .doc("Filter items by kind (e.g., function, struct, trait, etc.)")
+        .doc("Filter items by kind")
         .take(args)
-        .present()
+        .present_and_then(|a| {
+            crate::doc::ItemKind::parse_keyword_str(a.value()).ok_or_else(|| "TODO")
+        })?
     {
-        target_kinds.insert(a.value().to_owned());
+        target_kinds.extend(kinds);
     }
 
-    // TODO: --kind,  <ITEM_NAME_PART>...
+    // TODO:   <ITEM_NAME_PART>...
     let verbose = noargs::flag("verbose")
         .short('v')
         .doc("Enable verbose output")
@@ -66,20 +67,19 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             }
             continue;
         }
-
         if !target_kinds.is_empty() {
             doc.public_items
-                .retain(|(_, item)| target_kinds.contains(item.kind.as_str()));
+                .retain(|(_, item)| target_kinds.contains(&item.kind));
         }
-
         if verbose {
             eprintln!("Public items in crate '{}':", doc.crate_name);
             for (path, item) in &doc.public_items {
                 eprintln!("  [{}] {}", item.kind, path);
             }
         }
-
-        docs.push(doc);
+        if !doc.public_items.is_empty() {
+            docs.push(doc);
+        }
     }
 
     // show summary

@@ -31,7 +31,7 @@ impl std::fmt::Display for ItemId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ItemKind {
     Module,
     Use,
@@ -56,6 +56,24 @@ impl std::fmt::Display for ItemKind {
 }
 
 impl ItemKind {
+    pub fn parse_keyword_str(s: &str) -> Option<Vec<Self>> {
+        match s {
+            "mod" => Some(vec![ItemKind::Module]),
+            "use" => Some(vec![ItemKind::Use]),
+            "enum" => Some(vec![ItemKind::Enum]),
+            "variant" => Some(vec![ItemKind::Variant]),
+            "struct" => Some(vec![ItemKind::Struct]),
+            "field" => Some(vec![ItemKind::StructField]),
+            "type" => Some(vec![ItemKind::TypeAlias, ItemKind::AssocType]),
+            "fn" => Some(vec![ItemKind::Function]),
+            "const" => Some(vec![ItemKind::Constant, ItemKind::AssocConst]),
+            "trait" => Some(vec![ItemKind::Trait]),
+            "macro" => Some(vec![ItemKind::Macro]),
+            "impl" => Some(vec![ItemKind::Impl]),
+            _ => None,
+        }
+    }
+
     /// Returns the Rust keyword representation for this item kind (as it appears in source code)
     pub fn as_keyword_str(self) -> &'static str {
         match self {
