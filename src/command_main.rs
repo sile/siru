@@ -172,6 +172,18 @@ enum PrintError {
     },
 }
 
+impl PrintError {
+    fn set_text(self, text: &str) -> Self {
+        match self {
+            PrintError::Io => PrintError::Io,
+            PrintError::Json { error, .. } => PrintError::Json {
+                error,
+                text: text.to_string(),
+            },
+        }
+    }
+}
+
 impl From<std::io::Error> for PrintError {
     fn from(_err: std::io::Error) -> Self {
         PrintError::Io
@@ -196,6 +208,7 @@ fn print_output<W: std::io::Write>(
         if doc.show_items.is_empty() {
             continue;
         }
+        print_detail(writer, doc).map_err(|e| e.set_text(doc.json.text()))?;
     }
     Ok(())
 }
@@ -243,6 +256,29 @@ fn print_summary<W: std::io::Write>(
             )?;
         }
 
+        writeln!(writer)?;
+    }
+
+    Ok(())
+}
+
+fn print_detail<W: std::io::Write>(
+    writer: &mut W,
+    doc: &crate::doc::CrateDoc,
+) -> Result<(), PrintError> {
+    writeln!(writer, "## Details: `{}`\n", doc.crate_name)?;
+
+    for (path, item) in &doc.show_items {
+        writeln!(
+            writer,
+            "### [{:<width$}] `{}`\n",
+            item.kind.as_keyword_str(),
+            path,
+            width = item.kind.as_keyword_str().len()
+        )?;
+
+        // TODO: Add more detailed information about each item
+        // This might include documentation, signature, examples, etc.
         writeln!(writer)?;
     }
 
