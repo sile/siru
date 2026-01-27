@@ -96,7 +96,8 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         docs.push(doc);
     }
 
-    print_summary(&docs);
+    let mut stdout = std::io::stdout();
+    print_summary(&docs, &mut stdout)?;
 
     for _doc in docs {
         //
@@ -137,26 +138,30 @@ fn collect_doc_file_paths(
     Ok(file_paths)
 }
 
-fn print_summary(docs: &[crate::doc::CrateDoc]) {
-    println!("# Documentation Summary\n");
+fn print_summary<W: std::io::Write>(
+    docs: &[crate::doc::CrateDoc],
+    writer: &mut W,
+) -> std::io::Result<()> {
+    writeln!(writer, "# Documentation Summary\n")?;
 
-    println!("## Crates Overview\n");
+    writeln!(writer, "## Crates Overview\n")?;
     for doc in docs {
-        println!(
+        writeln!(
+            writer,
             "- `{}` ({} public items, {} items to show)",
             doc.crate_name,
             doc.public_item_count,
             doc.show_items.len()
-        );
+        )?;
     }
-    println!();
+    writeln!(writer)?;
 
     for doc in docs {
         if doc.show_items.is_empty() {
             continue;
         }
 
-        println!("## Crate: `{}`\n", doc.crate_name);
+        writeln!(writer, "## Crate: `{}`\n", doc.crate_name)?;
 
         // Calculate the longest kind keyword for padding
         let max_kind_len = doc
@@ -167,14 +172,17 @@ fn print_summary(docs: &[crate::doc::CrateDoc]) {
             .unwrap_or(0);
 
         for (path, item) in &doc.show_items {
-            println!(
+            writeln!(
+                writer,
                 "- [{:<width$}] `{}`",
                 item.kind.as_keyword_str(),
                 path,
                 width = max_kind_len
-            );
+            )?;
         }
 
-        println!();
+        writeln!(writer)?;
     }
+
+    Ok(())
 }
