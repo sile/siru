@@ -96,8 +96,9 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         docs.push(doc);
     }
 
-    let mut stdout = std::io::stdout();
-    print_summary(&docs, &mut stdout)?;
+    let stdout = std::io::stdout();
+    let mut writer = stdout.lock();
+    let _ = print_summary(&docs, &mut writer);
 
     for _doc in docs {
         //
