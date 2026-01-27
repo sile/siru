@@ -2,7 +2,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     let doc_paths: Vec<std::path::PathBuf> = noargs::opt("doc-path")
         .short('d')
         .ty("FILE|DIR[:FILE|DIR]...")
-        .doc("TODO")
+        .doc("Path(s) to documentation files or directories containing *.json files, separated by colons")
         .env("SIRU_DOC_PATH")
         .default("target/doc/")
         .take(args)
@@ -12,7 +12,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     while let Some(a) = noargs::opt("crate")
         .short('c')
         .ty("CRATE_NAME")
-        .doc("TODO")
+        .doc("Filter to specific crate(s) by name (can be specified multiple times)")
         .take(args)
         .present()
     {
@@ -23,7 +23,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     while let Some(kinds) = noargs::opt("kind")
         .short('k')
         .ty(crate::doc::ItemKind::KEYWORDS)
-        .doc("TODO")
+        .doc("Filter to specific item kind(s) (can be specified multiple times)")
         .take(args)
         .present_and_then(|a| {
             crate::doc::ItemKind::parse_keyword_str(a.value()).ok_or_else(|| "TODO")
