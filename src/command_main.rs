@@ -104,30 +104,24 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     }
 
     if let Some(cmd) = view_command {
-        use std::process::{Command, Stdio};
-
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
 
-        let mut child = Command::new(&shell)
+        let mut child = std::process::Command::new(&shell)
             .arg("-c")
             .arg(&cmd)
-            .stdin(Stdio::piped())
+            .stdin(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| format!("failed to spawn shell '{}': {}", shell, e))?;
 
         if let Some(mut stdin) = child.stdin.take() {
-            let _ = print_summary(&docs, &mut stdin);
+            let _ = print_output(&docs, &mut stdin);
         }
 
         let _ = child.wait();
     } else {
         let stdout = std::io::stdout();
         let mut writer = stdout.lock();
-        let _ = print_summary(&docs, &mut writer);
-    }
-
-    for _doc in docs {
-        //
+        let _ = print_output(&docs, &mut writer);
     }
 
     Ok(())
@@ -163,6 +157,13 @@ fn collect_doc_file_paths(
     }
 
     Ok(file_paths)
+}
+
+fn print_output<W: std::io::Write>(
+    docs: &[crate::doc::CrateDoc],
+    writer: &mut W,
+) -> std::io::Result<()> {
+    print_summary(docs, writer)
 }
 
 fn print_summary<W: std::io::Write>(
