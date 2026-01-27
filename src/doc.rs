@@ -44,6 +44,7 @@ pub enum ItemKind {
     Function,
     Constant,
     Trait,
+    TraitAlias,
     AssocType,
     AssocConst,
     Macro,
@@ -73,7 +74,7 @@ impl ItemKind {
             "type" => Some(vec![ItemKind::TypeAlias, ItemKind::AssocType]),
             "fn" => Some(vec![ItemKind::Function]),
             "const" => Some(vec![ItemKind::Constant, ItemKind::AssocConst]),
-            "trait" => Some(vec![ItemKind::Trait]),
+            "trait" => Some(vec![ItemKind::Trait, ItemKind::TraitAlias]),
             "macro" => Some(vec![ItemKind::Macro]),
             // NOTE: Filters out unnamed items
             // "use" => Some(vec![ItemKind::Use]),
@@ -96,6 +97,7 @@ impl ItemKind {
             ItemKind::Function => "fn",
             ItemKind::Constant => "const",
             ItemKind::Trait => "trait",
+            ItemKind::TraitAlias => "trait",
             ItemKind::AssocType => "type",
             ItemKind::AssocConst => "const",
             ItemKind::Macro => "macro",
@@ -118,6 +120,7 @@ impl ItemKind {
             ItemKind::Function => "function",
             ItemKind::Constant => "constant",
             ItemKind::Trait => "trait",
+            ItemKind::TraitAlias => "trait_alias",
             ItemKind::AssocType => "assoc_type",
             ItemKind::AssocConst => "assoc_const",
             ItemKind::Macro => "macro",
@@ -141,6 +144,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "struct" => Ok(ItemKind::Struct),
             "struct_field" => Ok(ItemKind::StructField),
             "type_alias" => Ok(ItemKind::TypeAlias),
+            "trait_alias" => Ok(ItemKind::TraitAlias),
             "function" => Ok(ItemKind::Function),
             "constant" => Ok(ItemKind::Constant),
             "trait" => Ok(ItemKind::Trait),
@@ -433,6 +437,7 @@ impl<'a> PublicItemCollector<'a> {
             ItemKind::Variant
             | ItemKind::StructField
             | ItemKind::TypeAlias
+            | ItemKind::TraitAlias
             | ItemKind::Function
             | ItemKind::Constant
             | ItemKind::AssocType
