@@ -329,7 +329,7 @@ impl<'a> PublicItemCollector<'a> {
         root_module_value: nojson::RawJsonValue<'a, 'a>,
     ) -> Result<(), nojson::JsonParseError> {
         let mut path = ItemPath(Vec::new());
-        self.visit_item(&mut path, root_module_value)?;
+        self.visit_item(&mut path, root_module_value, false)?;
         Ok(())
     }
 
@@ -337,10 +337,11 @@ impl<'a> PublicItemCollector<'a> {
         &mut self,
         path: &mut ItemPath,
         item_value: nojson::RawJsonValue<'a, 'a>,
+        force_public: bool,
     ) -> Result<(), nojson::JsonParseError> {
         let item = Item::try_from(item_value)?;
 
-        if !item.is_public {
+        if !item.is_public && !force_public {
             return Ok(());
         }
 
@@ -354,17 +355,17 @@ impl<'a> PublicItemCollector<'a> {
             ItemKind::Module => {
                 for item_id_value in inner.to_member("items")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
-                    self.visit_item(path, item_value)?;
+                    self.visit_item(path, item_value, false)?;
                 }
             }
             ItemKind::Enum => {
                 for item_id_value in inner.to_member("variants")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
-                    self.visit_item(path, item_value)?;
+                    self.visit_item(path, item_value, false)?;
                 }
                 for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
-                    self.visit_item(path, item_value)?;
+                    self.visit_item(path, item_value, false)?;
                 }
             }
             ItemKind::Struct => {
@@ -374,25 +375,25 @@ impl<'a> PublicItemCollector<'a> {
                 {
                     for field_id_value in plain.to_member("fields")?.required()?.to_array()? {
                         let field_value = self.items.get(self.json, field_id_value)?;
-                        self.visit_item(path, field_value)?;
+                        self.visit_item(path, field_value, false)?;
                     }
                 }
 
                 for item_id_value in inner.to_member("impls")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
-                    self.visit_item(path, item_value)?;
+                    self.visit_item(path, item_value, false)?;
                 }
             }
             ItemKind::Trait => {
                 for item_id_value in inner.to_member("items")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
-                    self.visit_item(path, item_value)?;
+                    self.visit_item(path, item_value, true)?;
                 }
             }
             ItemKind::Impl => {
                 for item_id_value in inner.to_member("items")?.required()?.to_array()? {
                     let item_value = self.items.get(self.json, item_id_value)?;
-                    self.visit_item(path, item_value)?;
+                    self.visit_item(path, item_value, false)?;
                 }
             }
             ItemKind::Use => {
@@ -400,7 +401,7 @@ impl<'a> PublicItemCollector<'a> {
                 if !is_glob {
                     let target_id_value = inner.to_member("id")?.required()?;
                     let target_item_value = self.items.get(self.json, target_id_value)?;
-                    self.visit_item(path, target_item_value)?;
+                    self.visit_item(path, target_item_value, false)?;
                 }
             }
             // Leaf items with no children to visit
