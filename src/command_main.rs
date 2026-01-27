@@ -361,11 +361,11 @@ fn format_type_alias_signature(
 }
 
 fn format_const_signature(view: &crate::item_view::ConstantView) -> Result<String, PrintError> {
-    Ok(format!("const {}", view.name()))
+    Ok(format!("const {}: {};", view.name(), view.ty()?))
 }
 
 fn format_assoc_const_signature(
     view: &crate::item_view::AssocConstView,
 ) -> Result<String, PrintError> {
-    Ok(format!("const {}", view.name()))
+    Ok(format!("const {}: {};", view.name(), view.ty()?))
 }
