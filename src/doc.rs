@@ -189,6 +189,29 @@ impl Item {
         json.get_value_by_index(self.inner_index.get())
             .expect("bug")
     }
+
+    pub fn docs(
+        &self,
+        json: &nojson::RawJsonOwned,
+    ) -> Result<Option<String>, nojson::JsonParseError> {
+        let Some(index) = self.docs_index else {
+            return Ok(None);
+        };
+        let value = json.get_value_by_index(index.get()).expect("bug");
+        Ok(Some(value.try_into()?))
+    }
+
+    pub fn deprecation_note(
+        &self,
+        json: &nojson::RawJsonOwned,
+    ) -> Result<Option<String>, nojson::JsonParseError> {
+        let Some(index) = self.deprecation_index else {
+            return Ok(None);
+        };
+        let value = json.get_value_by_index(index.get()).expect("bug");
+        let note: Option<String> = value.to_member("note")?.try_into()?;
+        Ok(Some(note.unwrap_or_default()))
+    }
 }
 
 #[derive(Debug, Clone)]
