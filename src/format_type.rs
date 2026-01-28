@@ -58,7 +58,10 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
     }
 
     fn format_resolved_path(&mut self, resolved: nojson::RawJsonValue) -> crate::Result<()> {
-        let path: String = resolved.to_member("path")?.required()?.try_into()?; // todo: use to_unquoted...
+        let path = resolved
+            .to_member("path")?
+            .required()?
+            .to_unquoted_string_str()?;
 
         if let Some(args) = resolved.to_member("args")?.get()
             && !args.kind().is_null()
@@ -72,7 +75,7 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
 
     fn format_resolved_path_with_args(
         &mut self,
-        path: String,
+        path: std::borrow::Cow<str>,
         args: nojson::RawJsonValue,
     ) -> crate::Result<()> {
         write!(self.writer, "{}", path)?;
@@ -91,7 +94,7 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             if let Some(arg_type) = arg.to_member("type")?.get() {
                 self.format_type(arg_type)?;
             } else if let Some(lifetime) = arg.to_member("lifetime")?.get() {
-                let lifetime_str: String = lifetime.try_into()?;
+                let lifetime_str = lifetime.to_unquoted_string_str()?;
                 write!(self.writer, "{lifetime_str}")?;
             }
         }
@@ -101,7 +104,7 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
     }
 
     fn format_primitive(&mut self, primitive: nojson::RawJsonValue) -> crate::Result<()> {
-        let formatted: String = primitive.try_into()?; // todo: use to_unquoted...
+        let formatted = primitive.to_unquoted_string_str()?;
         write!(self.writer, "{}", formatted)?;
         Ok(())
     }
@@ -129,10 +132,16 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
     }
 
     fn format_qualified_path(&mut self, qualified_path: nojson::RawJsonValue) -> crate::Result<()> {
-        let name: String = qualified_path.to_member("name")?.required()?.try_into()?;
+        let name = qualified_path
+            .to_member("name")?
+            .required()?
+            .to_unquoted_string_str()?;
         let self_type = qualified_path.to_member("self_type")?.required()?;
         let trait_info = qualified_path.to_member("trait")?.required()?;
-        let trait_path: String = trait_info.to_member("path")?.required()?.try_into()?;
+        let trait_path = trait_info
+            .to_member("path")?
+            .required()?
+            .to_unquoted_string_str()?;
 
         write!(self.writer, "<")?;
         self.format_type(self_type)?;
