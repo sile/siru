@@ -95,12 +95,35 @@ fn format_type(
     if let Some(generic) = ty.to_member("generic")?.get() {
         // {"generic":"Self"}
         Ok(generic.try_into()?)
-    } else if let Some(resolved) = ty.to_member("resolved_path")?.get()
-        && resolved.to_member("args")?.required()?.kind().is_null()
-    {
-        // {"resolved_path":{"path":"FlagSpec","id":323,"args":null}}
+    } else if let Some(resolved) = ty.to_member("resolved_path")?.get() {
         let path: String = resolved.to_member("path")?.required()?.try_into()?;
-        Ok(path)
+
+        // Check if this resolved_path has generic arguments
+        if let Some(args) = resolved.to_member("args")?.get()
+            && !args.kind().is_null()
+        {
+            // Handle generic arguments
+            let mut formatted_args = Vec::new();
+
+            if let Some(angle_bracketed) = args.to_member("angle_bracketed")?.get() {
+                let args_array = angle_bracketed.to_member("args")?.required()?;
+
+                for arg in args_array.to_array()? {
+                    if let Some(arg_type) = arg.to_member("type")?.get() {
+                        formatted_args.push(format_type(arg_type, doc)?);
+                    }
+                }
+            }
+
+            if !formatted_args.is_empty() {
+                Ok(format!("{}<{}>", path, formatted_args.join(", ")))
+            } else {
+                Ok(path)
+            }
+        } else {
+            // {"resolved_path":{"path":"FlagSpec","id":323,"args":null}}
+            Ok(path)
+        }
     } else if let Some(primitive) = ty.to_member("primitive")?.get() {
         // {"primitive":"bool"}
         Ok(primitive.try_into()?)
