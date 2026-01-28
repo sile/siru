@@ -1,3 +1,6 @@
+// todo: add TypeView
+// example: {"type":{"resolved_path":{"path":"std::result::Result","id":47,"args":{"angle_bracketed":{"args":[{"type":{"generic":"T"}},{"type":{"resolved_path":{"path":"Error","id":107,"args":null}}}],"constraints":[]}}}},"generics":{"params":[{"name":"T","kind":{"type":{"bounds":[],"default":null,"is_synthetic":false}}}],"where_predicates":[]}}
+
 #[derive(Debug)]
 pub struct ConstantView<'a> {
     doc: &'a crate::doc::CrateDoc,
