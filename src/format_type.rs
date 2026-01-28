@@ -137,6 +137,106 @@ mod tests {
         assert_format(r#"{"generic":"Self"}"#, "Self")
     }
 
+    #[test]
+    fn format_primitive() -> crate::Result<()> {
+        assert_format(r#"{"primitive":"u32"}"#, "u32")
+    }
+
+    #[test]
+    fn format_primitive_string() -> crate::Result<()> {
+        assert_format(r#"{"primitive":"str"}"#, "str")
+    }
+
+    #[test]
+    fn format_resolved_path_simple() -> crate::Result<()> {
+        assert_format(
+            r#"{"resolved_path":{"path":"std::vec::Vec","args":null}}"#,
+            "std::vec::Vec",
+        )
+    }
+
+    #[test]
+    fn format_resolved_path_with_generic_args() -> crate::Result<()> {
+        assert_format(
+            r#"{"resolved_path":{"path":"Vec","args":{"angle_bracketed":{"args":[{"type":{"primitive":"i32"}}]}}}}"#,
+            "Vec<i32>",
+        )
+    }
+
+    #[test]
+    fn format_resolved_path_with_multiple_args() -> crate::Result<()> {
+        assert_format(
+            r#"{"resolved_path":{"path":"HashMap","args":{"angle_bracketed":{"args":[{"type":{"primitive":"String"}},{"type":{"primitive":"i32"}}]}}}}"#,
+            "HashMap<String, i32>",
+        )
+    }
+
+    #[test]
+    fn format_borrowed_ref() -> crate::Result<()> {
+        assert_format(
+            r#"{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}}"#,
+            "&str",
+        )
+    }
+
+    #[test]
+    fn format_mutable_borrowed_ref() -> crate::Result<()> {
+        assert_format(
+            r#"{"borrowed_ref":{"lifetime":null,"is_mutable":true,"type":{"primitive":"Vec"}}}"#,
+            "&mut Vec",
+        )
+    }
+
+    #[test]
+    fn format_tuple_empty() -> crate::Result<()> {
+        assert_format(r#"{"tuple":[]}"#, "()")
+    }
+
+    #[test]
+    fn format_tuple_single_element() -> crate::Result<()> {
+        assert_format(r#"{"tuple":[{"primitive":"i32"}]}"#, "(i32)")
+    }
+
+    #[test]
+    fn format_tuple_multiple_elements() -> crate::Result<()> {
+        assert_format(
+            r#"{"tuple":[{"primitive":"i32"},{"primitive":"str"},{"primitive":"bool"}]}"#,
+            "(i32, str, bool)",
+        )
+    }
+
+    #[test]
+    fn format_nested_generic() -> crate::Result<()> {
+        assert_format(
+            r#"{"resolved_path":{"path":"Option","args":{"angle_bracketed":{"args":[{"type":{"resolved_path":{"path":"Vec","args":{"angle_bracketed":{"args":[{"type":{"primitive":"u8"}}]}}}}}]}}}}"#,
+            "Option<Vec<u8>>",
+        )
+    }
+
+    #[test]
+    fn format_borrowed_ref_complex_type() -> crate::Result<()> {
+        assert_format(
+            r#"{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"resolved_path":{"path":"Vec","args":{"angle_bracketed":{"args":[{"type":{"primitive":"String"}}]}}}}}}"#,
+            "&Vec<String>",
+        )
+    }
+
+    #[test]
+    fn format_mutable_borrowed_ref_with_generics() -> crate::Result<()> {
+        assert_format(
+            r#"{"borrowed_ref":{"lifetime":null,"is_mutable":true,"type":{"resolved_path":{"path":"Vec","args":{"angle_bracketed":{"args":[{"type":{"primitive":"i32"}}]}}}}}}"#,
+            "&mut Vec<i32>",
+        )
+    }
+
+    #[test]
+    fn format_tuple_with_complex_types() -> crate::Result<()> {
+        assert_format(
+            r#"{"tuple":[{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}},{"resolved_path":{"path":"Vec","args":{"angle_bracketed":{"args":[{"type":{"primitive":"i32"}}]}}}}]}"#,
+            "(&str, Vec<i32>)",
+        )
+    }
+
     fn assert_format(input: &str, expected: &str) -> crate::Result<()> {
         let doc = empty_doc();
         let raw_json = nojson::RawJson::parse(input)?;
