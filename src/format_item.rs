@@ -31,7 +31,7 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
         let sig = function.to_member("sig")?.required()?;
 
         // Format header (const, unsafe, async)
-        self.format_function_header(sig)?;
+        self.format_function_header(function)?;
 
         // Format function name
         write!(self.writer, "fn {}", self.name)?;
@@ -58,8 +58,8 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
         Ok(())
     }
 
-    fn format_function_header(&mut self, sig: nojson::RawJsonValue) -> crate::Result<()> {
-        let header = sig.to_member("header")?;
+    fn format_function_header(&mut self, function: nojson::RawJsonValue) -> crate::Result<()> {
+        let header = function.to_member("header")?;
 
         if let Some(header) = header.get() {
             let is_const: bool = header.to_member("is_const")?.required()?.try_into()?;
