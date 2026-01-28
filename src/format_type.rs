@@ -32,13 +32,7 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             self.format_resolved_path(resolved)
         } else if let Some(primitive) = ty.to_member("primitive")?.get() {
             self.format_primitive(primitive)
-        } else if let Some(borrowed_ref) = ty.to_member("borrowed_ref")?.get()
-            && borrowed_ref
-                .to_member("lifetime")?
-                .required()?
-                .kind()
-                .is_null()
-        {
+        } else if let Some(borrowed_ref) = ty.to_member("borrowed_ref")?.get() {
             self.format_borrowed_ref(borrowed_ref)
         } else if let Some(raw_pointer) = ty.to_member("raw_pointer")?.get() {
             self.format_raw_pointer(raw_pointer)
@@ -116,7 +110,25 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
     }
 
     fn format_borrowed_ref(&mut self, borrowed_ref: nojson::RawJsonValue) -> crate::Result<()> {
-        self.format_prefixed_type(borrowed_ref, "&mut ", "&")
+        let is_mutable: bool = borrowed_ref
+            .to_member("is_mutable")?
+            .required()?
+            .try_into()?;
+        let lifetime = borrowed_ref.to_member("lifetime")?;
+        let inner_type = borrowed_ref.to_member("type")?.required()?;
+
+        let prefix = if is_mutable { "&mut " } else { "&" };
+        write!(self.writer, "{}", prefix)?;
+
+        // Write lifetime if present
+        if let Some(lifetime_val) = lifetime.get() {
+            if !lifetime_val.kind().is_null() {
+                let lifetime_str = lifetime_val.to_unquoted_string_str()?;
+                write!(self.writer, "{} ", lifetime_str)?;
+            }
+        }
+
+        self.format_type(inner_type)
     }
 
     fn format_raw_pointer(&mut self, raw_pointer: nojson::RawJsonValue) -> crate::Result<()> {
