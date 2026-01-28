@@ -261,61 +261,27 @@ fn print_item_signature<W: std::io::Write>(
 ) -> crate::Result<()> {
     let inner = item.inner(&doc.json);
 
-    let signature = match item.kind {
-        crate::doc::ItemKind::Function => format_function_signature(inner)?,
-        crate::doc::ItemKind::Struct => format_struct_signature(item, inner)?,
-        crate::doc::ItemKind::Enum => format_enum_signature(item, inner)?,
-        crate::doc::ItemKind::Trait => format_trait_signature(item, inner)?,
+    writeln!(writer, "```rust")?;
+    match item.kind {
         crate::doc::ItemKind::TypeAlias | crate::doc::ItemKind::AssocType => {
             let view = crate::item_view::TypeView::new(doc, item);
             if let Some(ty) = view.ty()? {
-                format!("type {} = {};", view.name()?, ty)
+                writeln!(writer, "type {} = {};", view.name()?, ty)?;
             } else {
-                format!("type {};", view.name()?)
+                writeln!(writer, "type {};", view.name()?)?;
             }
         }
         crate::doc::ItemKind::Primitive => {
             let view = crate::item_view::PrimitiveView::new(doc, item);
-            format!("type {};", view.name())
+            writeln!(writer, "type {};", view.name())?;
         }
         crate::doc::ItemKind::Constant | crate::doc::ItemKind::AssocConst => {
             let view = crate::item_view::ConstantView::new(doc, item);
-            format!("const {}: {};", view.name(), view.ty()?)
+            writeln!(writer, "const {}: {};", view.name(), view.ty()?)?;
         }
-        _ => return Ok(()), // Other kinds may not need signatures
-    };
-
-    if !signature.is_empty() {
-        writeln!(writer, "```rust\n{}\n```\n", signature)?;
+        kind => unreachable!("{kind:?}: {inner}"),
     }
+    writeln!(writer, "```\n")?;
+
     Ok(())
-}
-
-fn format_function_signature(_inner: nojson::RawJsonValue) -> crate::Result<String> {
-    // Extract function signature details from the inner JSON
-    Ok(format!("fn {}", "TODO: extract signature"))
-}
-
-fn format_struct_signature(
-    item: &crate::doc::Item,
-    _inner: nojson::RawJsonValue,
-) -> crate::Result<String> {
-    let name = item.name.as_ref().expect("bug");
-    Ok(format!("struct {}", name))
-}
-
-fn format_enum_signature(
-    item: &crate::doc::Item,
-    _inner: nojson::RawJsonValue,
-) -> crate::Result<String> {
-    let name = item.name.as_ref().expect("bug");
-    Ok(format!("enum {}", name))
-}
-
-fn format_trait_signature(
-    item: &crate::doc::Item,
-    _inner: nojson::RawJsonValue,
-) -> crate::Result<String> {
-    let name = item.name.as_ref().expect("bug");
-    Ok(format!("trait {}", name))
 }
