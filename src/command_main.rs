@@ -296,6 +296,10 @@ fn print_item_signature<W: std::io::Write>(
             let view = crate::item_view::ProcMacroView::new(doc, item);
             writeln!(writer, "{}", view.derive_attribute()?)?;
         }
+        crate::doc::ItemKind::StructField => {
+            let view = crate::item_view::FieldView::new(doc, item);
+            writeln!(writer, "  {}: {}", view.name(), view.ty()?)?;
+        }
         kind => unreachable!("{kind:?}: {inner}"),
     }
     writeln!(writer, "```\n")?;

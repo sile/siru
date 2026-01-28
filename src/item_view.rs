@@ -1,4 +1,25 @@
 #[derive(Debug)]
+pub struct FieldView<'a> {
+    doc: &'a crate::doc::CrateDoc,
+    item: &'a crate::doc::Item,
+}
+
+impl<'a> FieldView<'a> {
+    pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
+        Self { doc, item }
+    }
+
+    pub fn name(&self) -> &str {
+        self.item.name.as_ref().expect("bug")
+    }
+
+    pub fn ty(&self) -> crate::Result<String> {
+        let inner = self.item.inner(&self.doc.json);
+        crate::format_type::format_to_string(&self.doc, inner)
+    }
+}
+
+#[derive(Debug)]
 pub struct ModuleView<'a> {
     doc: &'a crate::doc::CrateDoc,
     item: &'a crate::doc::Item,
@@ -19,7 +40,6 @@ impl<'a> ModuleView<'a> {
         Ok(items.to_array()?.count())
     }
 }
-
 
 #[derive(Debug)]
 pub struct ProcMacroView<'a> {
