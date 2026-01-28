@@ -48,6 +48,8 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             self.format_slice(slice)
         } else if let Some(array) = ty.to_member("array")?.get() {
             self.format_array(array)
+        } else if let Some(function_pointer) = ty.to_member("function_pointer")?.get() {
+            self.format_function_pointer(function_pointer)
         } else {
             write!(self.writer, "{}", ty)?;
             Ok(())
@@ -348,6 +350,40 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
         write!(self.writer, "; {}]", len)?;
         Ok(())
     }
+
+    fn format_function_pointer(&mut self, fn_ptr: nojson::RawJsonValue) -> crate::Result<()> {
+        let sig = fn_ptr.to_member("sig")?.required()?;
+
+        // Format function pointer signature
+        write!(self.writer, "fn(")?;
+
+        // Format inputs
+        let inputs = sig.to_member("inputs")?.required()?;
+        for (i, input_pair) in inputs.to_array()?.enumerate() {
+            if i > 0 {
+                write!(self.writer, ", ")?;
+            }
+
+            let input_array: Vec<_> = input_pair.to_array()?.collect();
+            if input_array.len() >= 2 {
+                let param_type = input_array[1];
+                self.format_type(param_type)?;
+            }
+        }
+
+        write!(self.writer, ")")?;
+
+        // Format output
+        let output = sig.to_member("output")?;
+        if let Some(output_type) = output.get() {
+            if !output_type.kind().is_null() {
+                write!(self.writer, " -> ")?;
+                self.format_type(output_type)?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -518,7 +554,7 @@ mod tests {
     #[test]
     fn format_impl_trait_with_associated_type() -> crate::Result<()> {
         assert_format(
-            r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"generic":"Self"}}}}]}}},"generic_params":[],"modifier":"none"}}]}"#,
+            r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"generic":"Self"}}}}]}}}, "generic_params":[],"modifier":"none"}}]}"#,
             "impl Iterator<Item = Self>",
         )
     }
@@ -534,7 +570,7 @@ mod tests {
     #[test]
     fn format_impl_trait_with_lifetime() -> crate::Result<()> {
         assert_format(
-            r#"{"impl_trait":[{"outlives":"'_"},{"trait_bound":{"trait":{"path":"Iterator","id":147,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"tuple":[{"primitive":"usize"},{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}}]}}}}]}}},"generic_params":[],"modifier":"none"}}]}"#,
+            r#"{"impl_trait":[{"outlives":"'_"},{"trait_bound":{"trait":{"path":"Iterator","id":147,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"tuple":[{"primitive":"usize"},{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}}]}}}}]}}}, "generic_params":[],"modifier":"none"}}]}"#,
             "impl '_ + Iterator<Item = (usize, &str)>",
         )
     }
@@ -554,6 +590,22 @@ mod tests {
         assert_format(
             r#"{"array":{"type":{"resolved_path":{"path":"String","args":null}},"len":"32"}}"#,
             "[String; 32]",
+        )
+    }
+
+    #[test]
+    fn format_function_pointer() -> crate::Result<()> {
+        assert_format(
+            r#"{"function_pointer":{"sig":{"inputs":[["-",{"resolved_path":{"path":"Layout","id":9530,"args":null}}]],"output":null,"is_c_variadic":false},"generic_params":[],"header":{"is_const":false,"is_unsafe":false,"is_async":false,"abi":"Rust"}}}"#,
+            "fn(Layout)",
+        )
+    }
+
+    #[test]
+    fn format_function_pointer_with_return() -> crate::Result<()> {
+        assert_format(
+            r#"{"function_pointer":{"sig":{"inputs":[["-",{"primitive":"i32"}]],"output":{"primitive":"i32"},"is_c_variadic":false},"generic_params":[],"header":{"is_const":false,"is_unsafe":false,"is_async":false,"abi":"Rust"}}}"#,
+            "fn(i32) -> i32",
         )
     }
 
