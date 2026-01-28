@@ -22,7 +22,7 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
     }
 
     pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
-        //println!("{inner}");
+        println!("{inner}");
         self.format_function_signature(inner)?;
         Ok(())
     }
@@ -536,6 +536,89 @@ mod tests {
         assert_eq!(
             formatted,
             "fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn format_function_with_impl_trait_return() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{
+        "sig": {
+            "inputs": [["self", {"generic": "Self"}]],
+            "output": {
+                "resolved_path": {
+                    "path": "Result",
+                    "id": 205,
+                    "args": {
+                        "angle_bracketed": {
+                            "args": [
+                                {
+                                    "type": {
+                                        "impl_trait": [
+                                            {
+                                                "trait_bound": {
+                                                    "trait": {
+                                                        "path": "Iterator",
+                                                        "id": 474,
+                                                        "args": {
+                                                            "angle_bracketed": {
+                                                                "args": [],
+                                                                "constraints": [
+                                                                    {
+                                                                        "name": "Item",
+                                                                        "args": null,
+                                                                        "binding": {
+                                                                            "equality": {
+                                                                                "type": {"generic": "Self"}
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }
+                                                    },
+                                                    "generic_params": [],
+                                                    "modifier": "none"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "type": {
+                                        "resolved_path": {
+                                            "path": "JsonParseError",
+                                            "id": 338,
+                                            "args": null
+                                        }
+                                    }
+                                }
+                            ],
+                            "constraints": []
+                        }
+                    }
+                }
+            },
+            "is_c_variadic": false,
+            "header": {
+                "is_const": false,
+                "is_unsafe": false,
+                "is_async": false,
+                "abi": "Rust"
+            }
+        },
+        "generics": {"params": [], "where_predicates": []},
+        "has_body": true
+    }"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let formatted = format_function_to_string(&doc, "into_iter", raw_json.value())?;
+
+        assert_eq!(
+            formatted,
+            "fn into_iter(self: Self) -> Result<impl Iterator<Item = Self>, JsonParseError>"
         );
 
         Ok(())

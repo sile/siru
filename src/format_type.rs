@@ -42,6 +42,8 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             self.format_tuple(tuple)
         } else if let Some(dyn_trait) = ty.to_member("dyn_trait")?.get() {
             self.format_dyn_trait(dyn_trait)
+        } else if let Some(impl_trait) = ty.to_member("impl_trait")?.get() {
+            self.format_impl_trait(impl_trait)
         } else {
             write!(self.writer, "{}", ty)?;
             Ok(())
@@ -229,6 +231,90 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
 
         Ok(())
     }
+
+    fn format_impl_trait(&mut self, impl_trait: nojson::RawJsonValue) -> crate::Result<()> {
+        write!(self.writer, "impl ")?;
+
+        let mut first = true;
+        for trait_obj in impl_trait.to_array()? {
+            if !first {
+                write!(self.writer, " + ")?;
+            }
+
+            let trait_bound = trait_obj.to_member("trait_bound")?.required()?;
+            let trait_info = trait_bound.to_member("trait")?.required()?;
+            let trait_path = trait_info
+                .to_member("path")?
+                .required()?
+                .to_unquoted_string_str()?;
+
+            write!(self.writer, "{}", trait_path)?;
+
+            // Handle generic args and constraints
+            if let Some(args) = trait_info.to_member("args")?.get()
+                && !args.kind().is_null()
+            {
+                self.format_impl_trait_args(args)?;
+            }
+
+            first = false;
+        }
+
+        Ok(())
+    }
+
+    fn format_impl_trait_args(&mut self, args: nojson::RawJsonValue) -> crate::Result<()> {
+        if let Some(angle_bracketed) = args.to_member("angle_bracketed")?.get() {
+            write!(self.writer, "<")?;
+
+            let args_array = angle_bracketed.to_member("args")?;
+            let mut has_args = false;
+            if let Some(args_list) = args_array.get() {
+                let mut first = true;
+                for arg in args_list.to_array()? {
+                    if !first {
+                        write!(self.writer, ", ")?;
+                    }
+
+                    if let Some(arg_type) = arg.to_member("type")?.get() {
+                        self.format_type(arg_type)?;
+                    }
+
+                    first = false;
+                    has_args = true;
+                }
+            }
+
+            let constraints = angle_bracketed.to_member("constraints")?;
+            if let Some(constraints_list) = constraints.get() {
+                let mut first = true;
+                for constraint in constraints_list.to_array()? {
+                    if has_args || !first {
+                        write!(self.writer, ", ")?;
+                    }
+
+                    let name = constraint
+                        .to_member("name")?
+                        .required()?
+                        .to_unquoted_string_str()?;
+                    write!(self.writer, "{}", name)?;
+
+                    if let Some(binding) = constraint.to_member("binding")?.get() {
+                        if let Some(equality) = binding.to_member("equality")?.get() {
+                            write!(self.writer, " = ")?;
+                            self.format_type(equality.to_member("type")?.required()?)?;
+                        }
+                    }
+
+                    first = false;
+                }
+            }
+
+            write!(self.writer, ">")?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -385,6 +471,30 @@ mod tests {
         assert_format(
             r#"{"dyn_trait":{"traits":[{"trait":{"path":"Iterator","id":200,"args":null},"generic_params":[]}],"lifetime":"'a"}}"#,
             "dyn Iterator + 'a",
+        )
+    }
+
+    #[test]
+    fn format_impl_trait_simple() -> crate::Result<()> {
+        assert_format(
+            r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":null},"generic_params":[],"modifier":"none"}}]}"#,
+            "impl Iterator",
+        )
+    }
+
+    #[test]
+    fn format_impl_trait_with_associated_type() -> crate::Result<()> {
+        assert_format(
+            r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"generic":"Self"}}}}]}},"generic_params":[],"modifier":"none"}}]}"#,
+            "impl Iterator<Item = Self>",
+        )
+    }
+
+    #[test]
+    fn format_impl_trait_multiple_bounds() -> crate::Result<()> {
+        assert_format(
+            r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":null},"generic_params":[],"modifier":"none"}},{"trait_bound":{"trait":{"path":"Send","id":6,"args":null},"generic_params":[],"modifier":"none"}}]}"#,
+            "impl Iterator + Send",
         )
     }
 
