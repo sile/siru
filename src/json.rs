@@ -15,7 +15,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for JsonValueIndex 
     }
 }
 
-pub fn format_parse_error(text: &str, error: nojson::JsonParseError) -> String {
+pub fn format_parse_error(text: &str, error: &nojson::JsonParseError) -> String {
     let (line_num, column_num) = error
         .get_line_and_column_numbers(text)
         .unwrap_or((std::num::NonZeroUsize::MIN, std::num::NonZeroUsize::MIN));

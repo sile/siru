@@ -13,6 +13,7 @@ pub enum Error {
     Io(std::io::Error),
     Json {
         error: nojson::JsonParseError,
+        text: Option<String>,
         backtrace: std::backtrace::Backtrace,
     },
 }
@@ -34,6 +35,7 @@ impl From<nojson::JsonParseError> for Error {
     fn from(error: nojson::JsonParseError) -> Self {
         Error::Json {
             error,
+            text: None,
             backtrace: std::backtrace::Backtrace::capture(),
         }
     }
@@ -44,7 +46,21 @@ impl std::fmt::Display for Error {
         match self {
             Error::Fmt(err) => write!(f, "Formatting error: {}", err),
             Error::Io(err) => write!(f, "IO error: {}", err),
-            Error::Json { error, .. } => write!(f, "JSON parse error: {}", error),
+            Error::Json {
+                error,
+                text,
+                backtrace,
+            } => {
+                if let Some(text) = text {
+                    write!(f, "{}", crate::json::format_parse_error(text, error))
+                } else {
+                    write!(f, "JSON parse error: {}", error)
+                }?;
+                if backtrace.status() == std::backtrace::BacktraceStatus::Captured {
+                    write!(f, "\n{}", backtrace)?;
+                }
+                Ok(())
+            }
         }
     }
 }

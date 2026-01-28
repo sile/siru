@@ -72,7 +72,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         let text = std::fs::read_to_string(&path)
             .map_err(|e| format!("failed to read file '{}': {e}", path.display()))?;
         let mut doc = crate::doc::CrateDoc::parse(path, &text)
-            .map_err(|e| crate::json::format_parse_error(&text, e))?;
+            .map_err(|e| crate::json::format_parse_error(&text, &e))?;
 
         if !target_crates.is_empty() && !target_crates.contains(&doc.crate_name) {
             continue;
@@ -129,7 +129,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     };
 
     if let Err(PrintError::Json { error, text }) = result {
-        return Err(crate::json::format_parse_error(&text, error).into());
+        return Err(crate::json::format_parse_error(&text, &error).into());
     }
     Ok(())
 }
@@ -331,14 +331,14 @@ fn print_item_signature<W: std::io::Write>(
     Ok(())
 }
 
-fn format_function_signature(inner: nojson::RawJsonValue) -> Result<String, PrintError> {
+fn format_function_signature(_inner: nojson::RawJsonValue) -> Result<String, PrintError> {
     // Extract function signature details from the inner JSON
     Ok(format!("fn {}", "TODO: extract signature"))
 }
 
 fn format_struct_signature(
     item: &crate::doc::Item,
-    inner: nojson::RawJsonValue,
+    _inner: nojson::RawJsonValue,
 ) -> Result<String, PrintError> {
     let name = item.name.as_ref().expect("bug");
     Ok(format!("struct {}", name))
@@ -346,7 +346,7 @@ fn format_struct_signature(
 
 fn format_enum_signature(
     item: &crate::doc::Item,
-    inner: nojson::RawJsonValue,
+    _inner: nojson::RawJsonValue,
 ) -> Result<String, PrintError> {
     let name = item.name.as_ref().expect("bug");
     Ok(format!("enum {}", name))
@@ -354,16 +354,8 @@ fn format_enum_signature(
 
 fn format_trait_signature(
     item: &crate::doc::Item,
-    inner: nojson::RawJsonValue,
+    _inner: nojson::RawJsonValue,
 ) -> Result<String, PrintError> {
     let name = item.name.as_ref().expect("bug");
     Ok(format!("trait {}", name))
-}
-
-fn format_type_alias_signature(
-    item: &crate::doc::Item,
-    inner: nojson::RawJsonValue,
-) -> Result<String, PrintError> {
-    let name = item.name.as_ref().expect("bug");
-    Ok(format!("type {}", name))
 }
