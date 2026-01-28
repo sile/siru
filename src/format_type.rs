@@ -134,8 +134,7 @@ mod tests {
 
     #[test]
     fn format_generic() -> crate::Result<()> {
-        assert_format(r#"{"generic":"Self"}"#, "Self")?;
-        Ok(())
+        assert_format(r#"{"generic":"Self"}"#, "Self")
     }
 
     fn assert_format(input: &str, expected: &str) -> crate::Result<()> {
