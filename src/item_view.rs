@@ -33,10 +33,13 @@ impl<'a> TypeView<'a> {
         }
     }
 
-    pub fn ty(&self) -> Result<String, nojson::JsonParseError> {
+    pub fn ty(&self) -> Result<Option<String>, nojson::JsonParseError> {
         let inner = self.item.inner(&self.doc.json);
         let ty = inner.to_member("type")?.required()?;
-        format_type(ty, &self.doc)
+        if ty.kind().is_null() {
+            return Ok(None);
+        }
+        format_type(ty, &self.doc).map(Some)
     }
 }
 

@@ -307,7 +307,11 @@ fn print_item_signature<W: std::io::Write>(
         crate::doc::ItemKind::Trait => format_trait_signature(item, inner)?,
         crate::doc::ItemKind::TypeAlias | crate::doc::ItemKind::AssocType => {
             let view = crate::item_view::TypeView::new(doc, item);
-            format!("type {} = {};", view.name()?, view.ty()?)
+            if let Some(ty) = view.ty()? {
+                format!("type {} = {};", view.name()?, ty)
+            } else {
+                format!("type {};", view.name()?)
+            }
         }
         crate::doc::ItemKind::Constant => {
             let view = crate::item_view::ConstantView::new(doc, item);
