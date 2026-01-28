@@ -85,8 +85,14 @@ fn format_type(
                 let args_array = angle_bracketed.to_member("args")?.required()?;
 
                 for arg in args_array.to_array()? {
+                    // Handle type arguments
                     if let Some(arg_type) = arg.to_member("type")?.get() {
                         formatted_args.push(format_type(arg_type, doc)?);
+                    }
+                    // Handle lifetime arguments
+                    else if let Some(lifetime) = arg.to_member("lifetime")?.get() {
+                        let lifetime_str: String = lifetime.try_into()?;
+                        formatted_args.push(lifetime_str);
                     }
                 }
             }
