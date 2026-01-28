@@ -1,5 +1,46 @@
-// todo: add TypeView
-// example: {"type":{"resolved_path":{"path":"std::result::Result","id":47,"args":{"angle_bracketed":{"args":[{"type":{"generic":"T"}},{"type":{"resolved_path":{"path":"Error","id":107,"args":null}}}],"constraints":[]}}}},"generics":{"params":[{"name":"T","kind":{"type":{"bounds":[],"default":null,"is_synthetic":false}}}],"where_predicates":[]}}
+#[derive(Debug)]
+pub struct TypeView<'a> {
+    doc: &'a crate::doc::CrateDoc,
+    item: &'a crate::doc::Item,
+}
+
+impl<'a> TypeView<'a> {
+    pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
+        assert_eq!(item.kind, crate::doc::ItemKind::TypeAlias);
+        Self { doc, item }
+    }
+
+    /// Returns the type name, building type parameters if they exist
+    pub fn name(&self) -> Result<String, nojson::JsonParseError> {
+        let name = self.item.name.as_ref().expect("bug");
+        let inner = self.item.inner(&self.doc.json);
+
+        // Check if there are generics to append
+        if let Some(generics) = inner.to_member("generics")?.get() {
+            let params = generics.to_member("params")?.required()?;
+            let mut generic_names = Vec::new();
+
+            for param in params.to_array()? {
+                let param_name: String = param.to_member("name")?.required()?.try_into()?;
+                generic_names.push(param_name);
+            }
+
+            if !generic_names.is_empty() {
+                Ok(format!("{}<{}>", name, generic_names.join(", ")))
+            } else {
+                Ok(name.clone())
+            }
+        } else {
+            Ok(name.clone())
+        }
+    }
+
+    pub fn ty(&self) -> Result<String, nojson::JsonParseError> {
+        let inner = self.item.inner(&self.doc.json);
+        let ty = inner.to_member("type")?.required()?;
+        format_type(ty, &self.doc)
+    }
+}
 
 #[derive(Debug)]
 pub struct ConstantView<'a> {

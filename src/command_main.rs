@@ -305,14 +305,17 @@ fn print_item_signature<W: std::io::Write>(
         crate::doc::ItemKind::Struct => format_struct_signature(item, inner)?,
         crate::doc::ItemKind::Enum => format_enum_signature(item, inner)?,
         crate::doc::ItemKind::Trait => format_trait_signature(item, inner)?,
-        crate::doc::ItemKind::TypeAlias => format_type_alias_signature(item, inner)?,
+        crate::doc::ItemKind::TypeAlias => {
+            let view = crate::item_view::TypeView::new(doc, item);
+            format!("type {} = {};", view.name()?, view.ty()?)
+        }
         crate::doc::ItemKind::Constant => {
             let view = crate::item_view::ConstantView::new(doc, item);
-            format_const_signature(&view)?
+            format!("const {}: {};", view.name(), view.ty()?)
         }
         crate::doc::ItemKind::AssocConst => {
             let view = crate::item_view::AssocConstView::new(doc, item);
-            format_assoc_const_signature(&view)?
+            format!("const {}: {};", view.name(), view.ty()?)
         }
         // todo: primitive
         _ => return Ok(()), // Other kinds may not need signatures
@@ -359,14 +362,4 @@ fn format_type_alias_signature(
 ) -> Result<String, PrintError> {
     let name = item.name.as_ref().expect("bug");
     Ok(format!("type {}", name))
-}
-
-fn format_const_signature(view: &crate::item_view::ConstantView) -> Result<String, PrintError> {
-    Ok(format!("const {}: {};", view.name(), view.ty()?))
-}
-
-fn format_assoc_const_signature(
-    view: &crate::item_view::AssocConstView,
-) -> Result<String, PrintError> {
-    Ok(format!("const {}: {};", view.name(), view.ty()?))
 }
