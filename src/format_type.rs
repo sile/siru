@@ -72,29 +72,28 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
         path: String,
         args: nojson::RawJsonValue,
     ) -> crate::Result<()> {
-        let mut formatted_args = Vec::new();
+        write!(self.writer, "{}", path)?;
 
-        if let Some(angle_bracketed) = args.to_member("angle_bracketed")?.get() {
-            let args_array = angle_bracketed.to_member("args")?.required()?;
+        let Some(angle_bracketed) = args.to_member("angle_bracketed")?.get() else {
+            return Ok(());
+        };
 
-            for arg in args_array.to_array()? {
-                if let Some(arg_type) = arg.to_member("type")?.get() {
-                    let mut buffer = Vec::new();
-                    let mut temp_formatter = TypeFormatter::new(&mut buffer, self.doc);
-                    temp_formatter.format_type(arg_type)?;
-                    formatted_args.push(String::from_utf8(buffer).expect("bug"));
-                } else if let Some(lifetime) = arg.to_member("lifetime")?.get() {
-                    let lifetime_str: String = lifetime.try_into()?;
-                    formatted_args.push(lifetime_str);
-                }
+        write!(self.writer, "<")?;
+        let args_array = angle_bracketed.to_member("args")?.required()?;
+        for (i, arg) in args_array.to_array()?.enumerate() {
+            if i > 0 {
+                write!(self.writer, ", ")?;
+            }
+
+            if let Some(arg_type) = arg.to_member("type")?.get() {
+                self.format_type(arg_type)?;
+            } else if let Some(lifetime) = arg.to_member("lifetime")?.get() {
+                let lifetime_str: String = lifetime.try_into()?;
+                write!(self.writer, "{lifetime_str}")?;
             }
         }
+        write!(self.writer, ">")?;
 
-        if !formatted_args.is_empty() {
-            write!(self.writer, "{}<{}>", path, formatted_args.join(", "))?;
-        } else {
-            write!(self.writer, "{}", path)?;
-        }
         Ok(())
     }
 
