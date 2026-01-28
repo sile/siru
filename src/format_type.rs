@@ -485,7 +485,7 @@ mod tests {
     #[test]
     fn format_impl_trait_with_associated_type() -> crate::Result<()> {
         assert_format(
-            r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"generic":"Self"}}}}]}},"generic_params":[],"modifier":"none"}}]}"#,
+            r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"generic":"Self"}}}}]}}},"generic_params":[],"modifier":"none"}}]}"#,
             "impl Iterator<Item = Self>",
         )
     }
