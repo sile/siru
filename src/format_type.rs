@@ -1,3 +1,13 @@
+pub fn format_to_string(
+    doc: &crate::doc::CrateDoc,
+    ty: nojson::RawJsonValue,
+) -> crate::Result<String> {
+    let mut buffer = Vec::new();
+    let mut formatter = TypeFormatter::new(&mut buffer, doc);
+    formatter.format(ty)?;
+    Ok(String::from_utf8(buffer).expect("bug"))
+}
+
 #[derive(Debug)]
 pub struct TypeFormatter<'a, W> {
     writer: W,
