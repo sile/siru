@@ -624,6 +624,19 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn format_function_with_const_modifier() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{"sig":{"inputs":[["name",{"borrowed_ref":{"lifetime":"'static","is_mutable":false,"type":{"primitive":"str"}}}]],"output":{"resolved_path":{"path":"OptSpec","id":411,"args":null}},"is_c_variadic":false},"generics":{"params":[],"where_predicates":[]},"header":{"is_const":true,"is_unsafe":false,"is_async":false,"abi":"Rust"},"has_body":true}"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let formatted = format_function_to_string(&doc, "new_opt", raw_json.value())?;
+
+        assert_eq!(formatted, "const fn new_opt(name: &'static str) -> OptSpec");
+
+        Ok(())
+    }
+
     fn empty_doc() -> crate::doc::CrateDoc {
         let text = r#"{"root": 0, "index": {"0": {"name": "test", "visibility": "public", "inner": {"module": {"items": []}}, "docs": null, "deprecation": null}}}"#;
         crate::doc::CrateDoc::parse(std::path::PathBuf::from(""), text).expect("bug")
