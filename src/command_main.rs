@@ -304,9 +304,6 @@ fn print_item_signature<W: std::io::Write>(
             let view = crate::item_view::FunctionView::new(doc, item);
             writeln!(writer, "{}", view.signature()?)?;
         }
-        // todo: add FuncionView
-        // thread 'main' (21847) panicked at src/command_main.rs:303:17:
-        // internal error: entered unreachable code: Function: {"sig":{"inputs":[["key",{"generic":"K"}]],"output":{"resolved_path":{"path":"Result","id":406,"args":{"angle_bracketed":{"args":[{"type":{"resolved_path":{"path":"String","id":447,"args":null}}},{"type":{"resolved_path":{"path":"std::env::VarError","id":628,"args":null}}}],"constraints":[]}}}},"is_c_variadic":false},"generics":{"params":[{"name":"K","kind":{"type":{"bounds":[{"trait_bound":{"trait":{"path":"AsRef","id":629,"args":{"angle_bracketed":{"args":[{"type":{"resolved_path":{"path":"std::ffi::OsStr","id":630,"args":null}}}],"constraints":[]}}},"generic_params":[],"modifier":"none"}},{"trait_bound":{"trait":{"path":"AsRef","id":629,"args":{"angle_bracketed":{"args":[{"type":{"primitive":"str"}}],"constraints":[]}}},"generic_params":[],"modifier":"none"}}],"default":null,"is_synthetic":false}}}],"where_predicates":[]},"header":{"is_const":false,"is_unsafe":false,"is_async":false,"abi":"Rust"},"has_body":true}
         kind => todo!("{kind:?}: {inner}"),
     }
     writeln!(writer, "```\n")?;
