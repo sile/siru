@@ -79,7 +79,7 @@ impl ItemKind {
             "fn" => Some(vec![ItemKind::Function]),
             "const" => Some(vec![ItemKind::Constant, ItemKind::AssocConst]),
             "trait" => Some(vec![ItemKind::Trait, ItemKind::TraitAlias]),
-            "macro" => Some(vec![ItemKind::Macro]),
+            "macro" => Some(vec![ItemKind::Macro, ItemKind::ProcMacro]),
             // NOTE: Filters out unnamed items
             // "use" => Some(vec![ItemKind::Use]),
             // "impl" => Some(vec![ItemKind::Impl]),
@@ -105,7 +105,7 @@ impl ItemKind {
             ItemKind::AssocType => "type",
             ItemKind::AssocConst => "const",
             ItemKind::Macro => "macro",
-            ItemKind::ProcMacro => "proc_macro",
+            ItemKind::ProcMacro => "macro",
             ItemKind::Impl => "impl",
             ItemKind::Primitive => "type",
         }

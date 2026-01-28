@@ -1,4 +1,33 @@
 #[derive(Debug)]
+pub struct ProcMacroView<'a> {
+    doc: &'a crate::doc::CrateDoc,
+    item: &'a crate::doc::Item,
+}
+
+impl<'a> ProcMacroView<'a> {
+    pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
+        Self { doc, item }
+    }
+
+    pub fn name(&self) -> &str {
+        self.item.name.as_ref().expect("bug")
+    }
+
+    pub fn derive_attribute(&self) -> crate::Result<String> {
+        let inner = self.item.inner(&self.doc.json);
+        let kind = inner
+            .to_member("kind")?
+            .required()?
+            .to_unquoted_string_str()?;
+        if kind == "derive" {
+            Ok(format!("#[derive({})]", self.name()))
+        } else {
+            Ok(format!("{inner}"))
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct PrimitiveView<'a> {
     doc: &'a crate::doc::CrateDoc,
     item: &'a crate::doc::Item,
