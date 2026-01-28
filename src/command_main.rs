@@ -104,7 +104,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         docs.push(doc);
     }
 
-    let result = if let Some(cmd) = view_command {
+    if let Some(cmd) = view_command {
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
 
         let mut child = std::process::Command::new(&shell)
@@ -118,19 +118,15 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             .stdin
             .take()
             .ok_or("failed to get child process stdin")?;
-        let result = print_output(&mut stdin, &docs);
+        print_output(&mut stdin, &docs)?;
         std::mem::drop(stdin);
         let _ = child.wait();
-        result
     } else {
         let stdout = std::io::stdout();
         let mut writer = stdout.lock();
-        print_output(&mut writer, &docs)
-    };
-
-    if let Err(PrintError::Json { error, text }) = result {
-        return Err(crate::json::format_parse_error(&text, &error).into());
+        print_output(&mut writer, &docs)?;
     }
+
     Ok(())
 }
 
@@ -166,51 +162,16 @@ fn collect_doc_file_paths(
     Ok(file_paths)
 }
 
-enum PrintError {
-    Io, // Output errors are ignored
-    Json {
-        error: nojson::JsonParseError,
-        text: String,
-    },
-}
-
-impl PrintError {
-    fn set_text(self, text: &str) -> Self {
-        match self {
-            PrintError::Io => PrintError::Io,
-            PrintError::Json { error, .. } => PrintError::Json {
-                error,
-                text: text.to_string(),
-            },
-        }
-    }
-}
-
-impl From<std::io::Error> for PrintError {
-    fn from(_err: std::io::Error) -> Self {
-        PrintError::Io
-    }
-}
-
-impl From<nojson::JsonParseError> for PrintError {
-    fn from(err: nojson::JsonParseError) -> Self {
-        PrintError::Json {
-            error: err,
-            text: String::new(),
-        }
-    }
-}
-
 fn print_output<W: std::io::Write>(
     writer: &mut W,
     docs: &[crate::doc::CrateDoc],
-) -> Result<(), PrintError> {
+) -> crate::Result<()> {
     print_summary(writer, docs)?;
     for doc in docs {
         if doc.show_items.is_empty() {
             continue;
         }
-        print_detail(writer, doc).map_err(|e| e.set_text(doc.json.text()))?;
+        print_detail(writer, doc)?;
     }
     Ok(())
 }
@@ -218,7 +179,7 @@ fn print_output<W: std::io::Write>(
 fn print_summary<W: std::io::Write>(
     writer: &mut W,
     docs: &[crate::doc::CrateDoc],
-) -> std::io::Result<()> {
+) -> crate::Result<()> {
     writeln!(writer, "# Crates Overview\n")?;
     for doc in docs {
         writeln!(
@@ -265,7 +226,7 @@ fn print_summary<W: std::io::Write>(
 fn print_detail<W: std::io::Write>(
     writer: &mut W,
     doc: &crate::doc::CrateDoc,
-) -> Result<(), PrintError> {
+) -> crate::Result<()> {
     for (path, item) in &doc.show_items {
         writeln!(writer, "# [{}] `{}`\n", item.kind.as_keyword_str(), path)?;
 
@@ -297,7 +258,7 @@ fn print_item_signature<W: std::io::Write>(
     writer: &mut W,
     doc: &crate::doc::CrateDoc,
     item: &crate::doc::Item,
-) -> Result<(), PrintError> {
+) -> crate::Result<()> {
     let inner = item.inner(&doc.json);
 
     let signature = match item.kind {
@@ -331,7 +292,7 @@ fn print_item_signature<W: std::io::Write>(
     Ok(())
 }
 
-fn format_function_signature(_inner: nojson::RawJsonValue) -> Result<String, PrintError> {
+fn format_function_signature(_inner: nojson::RawJsonValue) -> crate::Result<String> {
     // Extract function signature details from the inner JSON
     Ok(format!("fn {}", "TODO: extract signature"))
 }
@@ -339,7 +300,7 @@ fn format_function_signature(_inner: nojson::RawJsonValue) -> Result<String, Pri
 fn format_struct_signature(
     item: &crate::doc::Item,
     _inner: nojson::RawJsonValue,
-) -> Result<String, PrintError> {
+) -> crate::Result<String> {
     let name = item.name.as_ref().expect("bug");
     Ok(format!("struct {}", name))
 }
@@ -347,7 +308,7 @@ fn format_struct_signature(
 fn format_enum_signature(
     item: &crate::doc::Item,
     _inner: nojson::RawJsonValue,
-) -> Result<String, PrintError> {
+) -> crate::Result<String> {
     let name = item.name.as_ref().expect("bug");
     Ok(format!("enum {}", name))
 }
@@ -355,7 +316,7 @@ fn format_enum_signature(
 fn format_trait_signature(
     item: &crate::doc::Item,
     _inner: nojson::RawJsonValue,
-) -> Result<String, PrintError> {
+) -> crate::Result<String> {
     let name = item.name.as_ref().expect("bug");
     Ok(format!("trait {}", name))
 }

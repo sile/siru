@@ -23,7 +23,7 @@ impl Error {
         match self {
             Error::Json {
                 error,
-                text: _,
+                text: None,
                 backtrace,
             } => Error::Json {
                 error,
