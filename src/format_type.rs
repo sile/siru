@@ -40,6 +40,10 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
                 .is_null()
         {
             self.format_borrowed_ref(borrowed_ref)
+        } else if let Some(raw_pointer) = ty.to_member("raw_pointer")?.get() {
+            self.format_raw_pointer(raw_pointer)
+        } else if let Some(qualified_path) = ty.to_member("qualified_path")?.get() {
+            self.format_qualified_path(qualified_path)
         } else if let Some(tuple) = ty.to_member("tuple")?.get() {
             self.format_tuple(tuple)
         } else {
@@ -113,6 +117,30 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
         self.format_type(inner_type)
     }
 
+    fn format_raw_pointer(&mut self, raw_pointer: nojson::RawJsonValue) -> crate::Result<()> {
+        let is_mutable: bool = raw_pointer
+            .to_member("is_mutable")?
+            .required()?
+            .try_into()?;
+        let inner_type = raw_pointer.to_member("type")?.required()?;
+        let prefix = if is_mutable { "*mut " } else { "*const " };
+        write!(self.writer, "{}", prefix)?;
+        self.format_type(inner_type)
+    }
+
+    fn format_qualified_path(&mut self, qualified_path: nojson::RawJsonValue) -> crate::Result<()> {
+        let name: String = qualified_path.to_member("name")?.required()?.try_into()?;
+        let self_type = qualified_path.to_member("self_type")?.required()?;
+        let trait_info = qualified_path.to_member("trait")?.required()?;
+        let trait_path: String = trait_info.to_member("path")?.required()?.try_into()?;
+
+        write!(self.writer, "<")?;
+        self.format_type(self_type)?;
+        write!(self.writer, " as {}>::{}", trait_path, name)?;
+
+        Ok(())
+    }
+
     fn format_tuple(&mut self, tuple: nojson::RawJsonValue) -> crate::Result<()> {
         write!(self.writer, "(")?;
         let mut first = true;
@@ -184,6 +212,30 @@ mod tests {
         assert_format(
             r#"{"borrowed_ref":{"lifetime":null,"is_mutable":true,"type":{"primitive":"Vec"}}}"#,
             "&mut Vec",
+        )
+    }
+
+    #[test]
+    fn format_raw_pointer_const() -> crate::Result<()> {
+        assert_format(
+            r#"{"raw_pointer":{"is_mutable":false,"type":{"resolved_path":{"path":"objc_selector","id":12403,"args":null}}}}"#,
+            "*const objc_selector",
+        )
+    }
+
+    #[test]
+    fn format_raw_pointer_mut() -> crate::Result<()> {
+        assert_format(
+            r#"{"raw_pointer":{"is_mutable":true,"type":{"resolved_path":{"path":"objc_selector","id":12403,"args":null}}}}"#,
+            "*mut objc_selector",
+        )
+    }
+
+    #[test]
+    fn format_qualified_path() -> crate::Result<()> {
+        assert_format(
+            r#"{"qualified_path":{"name":"AtomicInner","args":null,"self_type":{"generic":"T"},"trait":{"path":"AtomicPrimitive","id":27989,"args":null}}}"#,
+            "<T as AtomicPrimitive>::AtomicInner",
         )
     }
 
