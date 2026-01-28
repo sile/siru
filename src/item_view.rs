@@ -14,7 +14,7 @@ impl<'a> FunctionView<'a> {
     }
 
     pub fn signature(&self) -> crate::Result<String> {
-        crate::format_item::format_signature(&self.doc, &self.item)
+        crate::format_item::format_function_to_string(&self.doc, &self.item)
     }
 }
 
