@@ -238,35 +238,46 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
     }
 
     fn format_where_predicate(&mut self, predicate: nojson::RawJsonValue) -> crate::Result<()> {
-        // Try to extract the left-hand side (type being constrained)
-        if let Some(lhs) = predicate.to_member("lhs")?.get() {
-            let formatted_lhs = crate::format_type::format_to_string(self.doc, lhs)?;
-            write!(self.writer, "{}", formatted_lhs)?;
-        }
+        // Extract bound_predicate wrapper
+        if let Some(bound_predicate) = predicate.to_member("bound_predicate")?.get() {
+            // Extract the type being constrained
+            if let Some(lhs) = bound_predicate.to_member("type")?.get() {
+                let formatted_lhs = crate::format_type::format_to_string(self.doc, lhs)?;
+                write!(self.writer, "{}", formatted_lhs)?;
+            }
 
-        // Format the bounds
-        let bounds = predicate.to_member("bounds")?;
-        if let Some(bounds_array) = bounds.get() {
-            let bounds_list: Vec<_> = bounds_array.to_array()?.collect();
+            // Format the bounds
+            let bounds = bound_predicate.to_member("bounds")?;
+            if let Some(bounds_array) = bounds.get() {
+                let bounds_list: Vec<_> = bounds_array.to_array()?.collect();
 
-            for (i, bound) in bounds_list.iter().enumerate() {
-                if i == 0 {
+                if !bounds_list.is_empty() {
                     write!(self.writer, ": ")?;
-                } else {
-                    write!(self.writer, " + ")?;
-                }
 
-                if let Some(trait_bound) = bound.to_member("trait_bound")?.get() {
-                    let trait_info = trait_bound.to_member("trait")?.required()?;
-                    let trait_path = trait_info
-                        .to_member("path")?
-                        .required()?
-                        .to_unquoted_string_str()?;
-                    write!(self.writer, "{}", trait_path)?;
+                    for (i, bound) in bounds_list.iter().enumerate() {
+                        if i > 0 {
+                            write!(self.writer, " + ")?;
+                        }
 
-                    if let Some(args) = trait_info.to_member("args")?.get() {
-                        if !args.kind().is_null() {
-                            self.format_trait_args(args)?;
+                        if let Some(trait_bound) = bound.to_member("trait_bound")?.get() {
+                            let trait_info = trait_bound.to_member("trait")?.required()?;
+                            let trait_path = trait_info
+                                .to_member("path")?
+                                .required()?
+                                .to_unquoted_string_str()?;
+
+                            if trait_path.is_empty() {
+                                // Handle empty path (associated types)
+                                write!(self.writer, "?")?;
+                            } else {
+                                write!(self.writer, "{}", trait_path)?;
+                            }
+
+                            if let Some(args) = trait_info.to_member("args")?.get() {
+                                if !args.kind().is_null() {
+                                    self.format_trait_args(args)?;
+                                }
+                            }
                         }
                     }
                 }
@@ -458,6 +469,47 @@ mod tests {
         let result = String::from_utf8_lossy(&buffer);
         assert_eq!(result, "const ");
 
+        Ok(())
+    }
+
+    #[test]
+    fn format_where_clause_with_trait_bounds() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{
+        "sig": {
+            "inputs": [["self", {"borrowed_ref": {"lifetime": null, "is_mutable": true, "type": {"generic": "Self"}}}]],
+            "output": {"generic": "Option"},
+            "is_c_variadic": false,
+            "header": {"is_const": false, "is_unsafe": false, "is_async": false, "abi": "Rust"}
+        },
+        "generics": {
+            "params": [{"name": "B", "kind": {"type": {"bounds": [], "default": null, "is_synthetic": false}}}],
+            "where_predicates": [
+                {
+                    "bound_predicate": {
+                        "type": {"generic": "Self"},
+                        "bounds": [{"trait_bound": {"trait": {"path": "Sized", "id": 12, "args": null}, "generic_params": [], "modifier": "none"}}],
+                        "generic_params": []
+                    }
+                },
+                {
+                    "bound_predicate": {
+                        "type": {"generic": "B"},
+                        "bounds": [{"trait_bound": {"trait": {"path": "Default", "id": 13, "args": null}, "generic_params": [], "modifier": "none"}}],
+                        "generic_params": []
+                    }
+                }
+            ]
+        },
+        "has_body": true
+    }"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let formatted = format_function_to_string(&doc, "test_fn", raw_json.value())?;
+        assert_eq!(
+            formatted,
+            "fn test_fn<B>(self: &mut Self) -> Option\nwhere\n    Self: Sized,\n    B: Default"
+        );
         Ok(())
     }
 
