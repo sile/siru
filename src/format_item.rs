@@ -22,8 +22,8 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
     }
 
     pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
-        let function = inner.to_member("function")?.required()?;
-        self.format_function_signature(function)?;
+        println!("{inner}");
+        self.format_function_signature(inner)?;
         Ok(())
     }
 
@@ -59,20 +59,22 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
     }
 
     fn format_function_header(&mut self, sig: nojson::RawJsonValue) -> crate::Result<()> {
-        let header = sig.to_member("header")?.required()?;
+        let header = sig.to_member("header")?;
 
-        let is_const: bool = header.to_member("is_const")?.required()?.try_into()?;
-        let is_unsafe: bool = header.to_member("is_unsafe")?.required()?.try_into()?;
-        let is_async: bool = header.to_member("is_async")?.required()?.try_into()?;
+        if let Some(header) = header.get() {
+            let is_const: bool = header.to_member("is_const")?.required()?.try_into()?;
+            let is_unsafe: bool = header.to_member("is_unsafe")?.required()?.try_into()?;
+            let is_async: bool = header.to_member("is_async")?.required()?.try_into()?;
 
-        if is_const {
-            write!(self.writer, "const ")?;
-        }
-        if is_unsafe {
-            write!(self.writer, "unsafe ")?;
-        }
-        if is_async {
-            write!(self.writer, "async ")?;
+            if is_const {
+                write!(self.writer, "const ")?;
+            }
+            if is_unsafe {
+                write!(self.writer, "unsafe ")?;
+            }
+            if is_async {
+                write!(self.writer, "async ")?;
+            }
         }
 
         Ok(())
@@ -365,6 +367,97 @@ mod tests {
             formatted,
             "fn var<K: AsRef<std::ffi::OsStr> + AsRef<str>>(key: K) -> Result<String, std::env::VarError>"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn format_function_header_with_modifiers() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{"sig": {"inputs": [], "output": null, "is_c_variadic": false, "header": {"is_const": true, "is_unsafe": true, "is_async": false, "abi": "Rust"}}, "generics": {"params": [], "where_predicates": []}, "has_body": true}"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let sig = raw_json.value().to_member("sig")?.required()?;
+
+        let mut buffer = Vec::new();
+        let mut formatter = FunctionFormatter::new(&mut buffer, &doc, "test_fn");
+        formatter.format_function_header(sig)?;
+
+        let result = String::from_utf8_lossy(&buffer);
+        assert_eq!(result, "const unsafe ");
+
+        Ok(())
+    }
+
+    #[test]
+    fn format_function_header_without_modifiers() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{"sig": {"inputs": [], "output": null, "is_c_variadic": false, "header": {"is_const": false, "is_unsafe": false, "is_async": false, "abi": "Rust"}}, "generics": {"params": [], "where_predicates": []}, "has_body": true}"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let sig = raw_json.value().to_member("sig")?.required()?;
+
+        let mut buffer = Vec::new();
+        let mut formatter = FunctionFormatter::new(&mut buffer, &doc, "test_fn");
+        formatter.format_function_header(sig)?;
+
+        let result = String::from_utf8_lossy(&buffer);
+        assert_eq!(result, "");
+
+        Ok(())
+    }
+
+    #[test]
+    fn format_function_header_async() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{"sig": {"inputs": [], "output": null, "is_c_variadic": false, "header": {"is_const": false, "is_unsafe": false, "is_async": true, "abi": "Rust"}}, "generics": {"params": [], "where_predicates": []}, "has_body": true}"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let sig = raw_json.value().to_member("sig")?.required()?;
+
+        let mut buffer = Vec::new();
+        let mut formatter = FunctionFormatter::new(&mut buffer, &doc, "test_fn");
+        formatter.format_function_header(sig)?;
+
+        let result = String::from_utf8_lossy(&buffer);
+        assert_eq!(result, "async ");
+
+        Ok(())
+    }
+
+    #[test]
+    fn format_function_header_missing() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{"sig": {"inputs": [], "output": null, "is_c_variadic": false}, "generics": {"params": [], "where_predicates": []}, "has_body": true}"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let sig = raw_json.value().to_member("sig")?.required()?;
+
+        let mut buffer = Vec::new();
+        let mut formatter = FunctionFormatter::new(&mut buffer, &doc, "test_fn");
+        // Should not panic when header is missing
+        formatter.format_function_header(sig)?;
+
+        let result = String::from_utf8_lossy(&buffer);
+        assert_eq!(result, "");
+
+        Ok(())
+    }
+
+    #[test]
+    fn format_function_header_const_and_unsafe() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{"sig": {"inputs": [], "output": null, "is_c_variadic": false, "header": {"is_const": true, "is_unsafe": false, "is_async": false, "abi": "Rust"}}, "generics": {"params": [], "where_predicates": []}, "has_body": true}"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let sig = raw_json.value().to_member("sig")?.required()?;
+
+        let mut buffer = Vec::new();
+        let mut formatter = FunctionFormatter::new(&mut buffer, &doc, "test_fn");
+        formatter.format_function_header(sig)?;
+
+        let result = String::from_utf8_lossy(&buffer);
+        assert_eq!(result, "const ");
 
         Ok(())
     }
