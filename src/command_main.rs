@@ -46,7 +46,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         .is_present();
 
     let mut target_path_parts = Vec::new();
-    while let Some(part) = noargs::arg("[ITEM_PATH_PART]")
+    while let Some(part) = noargs::arg("[ITEM_PATH_PART]...")
         .doc("Filter items to only those having all specified path parts")
         .take(args)
         .present_and_then(|a| a.value().parse::<String>())?

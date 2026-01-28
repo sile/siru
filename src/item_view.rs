@@ -9,7 +9,7 @@ impl<'a> TypeView<'a> {
         Self { doc, item }
     }
 
-    pub fn name(&self) -> Result<String, nojson::JsonParseError> {
+    pub fn name(&self) -> crate::Result<String> {
         let name = self.item.name.as_ref().expect("bug");
         let inner = self.item.inner(&self.doc.json);
 
@@ -33,7 +33,7 @@ impl<'a> TypeView<'a> {
         }
     }
 
-    pub fn ty(&self) -> Result<Option<String>, nojson::JsonParseError> {
+    pub fn ty(&self) -> crate::Result<Option<String>> {
         let inner = self.item.inner(&self.doc.json);
         let ty = inner.to_member("type")?.required()?;
         if ty.kind().is_null() {
@@ -58,7 +58,7 @@ impl<'a> ConstantView<'a> {
         self.item.name.as_ref().expect("bug")
     }
 
-    pub fn ty(&self) -> Result<String, nojson::JsonParseError> {
+    pub fn ty(&self) -> crate::Result<String> {
         let inner = self.item.inner(&self.doc.json);
         let ty = inner.to_member("type")?.required()?;
         format_type(ty, &self.doc)
@@ -67,10 +67,7 @@ impl<'a> ConstantView<'a> {
 
 pub type AssocConstView<'a> = ConstantView<'a>;
 
-fn format_type(
-    ty: nojson::RawJsonValue,
-    doc: &crate::doc::CrateDoc,
-) -> Result<String, nojson::JsonParseError> {
+fn format_type(ty: nojson::RawJsonValue, doc: &crate::doc::CrateDoc) -> crate::Result<String> {
     if let Some(generic) = ty.to_member("generic")?.get() {
         // {"generic":"Self"}
         Ok(generic.try_into()?)
