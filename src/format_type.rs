@@ -49,13 +49,12 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
     }
 
     fn format_generic(&mut self, generic: nojson::RawJsonValue) -> crate::Result<()> {
-        let formatted: String = generic.try_into()?;
-        write!(self.writer, "{}", formatted)?;
+        write!(self.writer, "{}", generic.to_unquoted_string_str()?)?;
         Ok(())
     }
 
     fn format_resolved_path(&mut self, resolved: nojson::RawJsonValue) -> crate::Result<()> {
-        let path: String = resolved.to_member("path")?.required()?.try_into()?;
+        let path: String = resolved.to_member("path")?.required()?.try_into()?; // todo: use to_unquoted...
 
         if let Some(args) = resolved.to_member("args")?.get()
             && !args.kind().is_null()
@@ -98,7 +97,7 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
     }
 
     fn format_primitive(&mut self, primitive: nojson::RawJsonValue) -> crate::Result<()> {
-        let formatted: String = primitive.try_into()?;
+        let formatted: String = primitive.try_into()?; // todo: use to_unquoted...
         write!(self.writer, "{}", formatted)?;
         Ok(())
     }
@@ -126,5 +125,29 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
         }
         write!(self.writer, ")")?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_generic() -> crate::Result<()> {
+        assert_format(r#"{"generic":"Self"}"#, "Self")?;
+        Ok(())
+    }
+
+    fn assert_format(input: &str, expected: &str) -> crate::Result<()> {
+        let doc = empty_doc();
+        let raw_json = nojson::RawJson::parse(input)?;
+        let formatted = format_to_string(&doc, raw_json.value())?;
+        assert_eq!(formatted, expected);
+        Ok(())
+    }
+
+    fn empty_doc() -> crate::doc::CrateDoc {
+        let text = r#"{"root": 0, "index": {"0": {"name": "test", "visibility": "public", "inner": {"module": {"items": []}}, "docs": null, "deprecation": null}}}"#;
+        crate::doc::CrateDoc::parse(std::path::PathBuf::from(""), text).expect("bug")
     }
 }
