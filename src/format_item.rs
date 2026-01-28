@@ -4,8 +4,8 @@ pub fn format_function_to_string(
     inner: nojson::RawJsonValue,
 ) -> crate::Result<String> {
     let mut buffer = Vec::new();
-    let mut formatter = FunctionFormatter::new(&mut buffer, doc, name, inner);
-    formatter.format()?;
+    let mut formatter = FunctionFormatter::new(&mut buffer, doc, name);
+    formatter.format(inner)?;
     Ok(String::from_utf8(buffer).expect("bug"))
 }
 
@@ -14,26 +14,15 @@ pub struct FunctionFormatter<'a, W> {
     writer: W,
     doc: &'a crate::doc::CrateDoc,
     name: &'a str,
-    inner: nojson::RawJsonValue,
 }
 
 impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
-    pub fn new(
-        writer: W,
-        doc: &'a crate::doc::CrateDoc,
-        name: &'a str,
-        inner: nojson::RawJsonValue,
-    ) -> Self {
-        Self {
-            writer,
-            doc,
-            name,
-            inner,
-        }
+    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, name: &'a str) -> Self {
+        Self { writer, doc, name }
     }
 
-    pub fn format(&mut self) -> crate::Result<()> {
-        let function = self.inner.to_member("function")?.required()?;
+    pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
+        let function = inner.to_member("function")?.required()?;
         self.format_function_signature(function)?;
         Ok(())
     }
