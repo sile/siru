@@ -1,4 +1,78 @@
 #[derive(Debug)]
+pub struct FunctionView<'a> {
+    doc: &'a crate::doc::CrateDoc,
+    item: &'a crate::doc::Item,
+}
+
+impl<'a> FunctionView<'a> {
+    pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
+        Self { doc, item }
+    }
+
+    pub fn name(&self) -> &str {
+        self.item.name.as_ref().expect("bug")
+    }
+
+    pub fn signature(&self) -> crate::Result<String> {
+        let inner = self.item.inner(&self.doc.json);
+        let sig = inner.to_member("sig")?.required()?;
+        // todo: add another module like format_tyoe.rs to format function signature
+        let mut output = String::from("fn ");
+        output.push_str(self.name());
+
+        // Format generic parameters if present
+        if let Some(generics) = inner.to_member("generics")?.get() {
+            if let Some(params) = generics.to_member("params")?.get() {
+                if !params.kind().is_null() {
+                    output.push('<');
+                    let mut first = true;
+                    for param in params.to_array()? {
+                        if !first {
+                            output.push_str(", ");
+                        }
+                        let param_name: String = param.to_member("name")?.required()?.try_into()?;
+                        output.push_str(&param_name);
+                        first = false;
+                    }
+                    output.push('>');
+                }
+            }
+        }
+
+        // Format inputs
+        output.push('(');
+        if let Some(inputs) = sig.to_member("inputs")?.get() {
+            if !inputs.kind().is_null() {
+                let mut first = true;
+                for input in inputs.to_array()? {
+                    if !first {
+                        output.push_str(", ");
+                    }
+                    if let Some(name_val) = input.to_array()?.next() {
+                        let param_name: String = name_val.try_into()?;
+                        output.push_str(&param_name);
+                        output.push_str(": ");
+                    }
+                    if let Some(ty_val) = input.to_array()?.nth(1) {
+                        let ty_str = crate::format_type::format_to_string(&self.doc, ty_val)?;
+                        output.push_str(&ty_str);
+                    }
+                    first = false;
+                }
+            }
+        }
+        output.push(')');
+
+        // Format output
+        output.push_str(" -> ");
+        let output_ty = sig.to_member("output")?.required()?;
+        output.push_str(&crate::format_type::format_to_string(&self.doc, output_ty)?);
+
+        Ok(output)
+    }
+}
+
+#[derive(Debug)]
 pub struct FieldView<'a> {
     doc: &'a crate::doc::CrateDoc,
     item: &'a crate::doc::Item,
