@@ -18,7 +18,23 @@ pub enum Error {
     },
 }
 
-// From implementations
+impl Error {
+    pub fn set_json_text(self, text: impl Into<String>) -> Self {
+        match self {
+            Error::Json {
+                error,
+                text: _,
+                backtrace,
+            } => Error::Json {
+                error,
+                text: Some(text.into()),
+                backtrace,
+            },
+            other => other,
+        }
+    }
+}
+
 impl From<std::fmt::Error> for Error {
     fn from(error: std::fmt::Error) -> Self {
         Error::Fmt(error)
