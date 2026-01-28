@@ -22,7 +22,7 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
     }
 
     pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
-        println!("{inner}");
+        //println!("{inner}");
         self.format_function_signature(inner)?;
         Ok(())
     }
@@ -510,6 +510,34 @@ mod tests {
             formatted,
             "fn test_fn<B>(self: &mut Self) -> Option\nwhere\n    Self: Sized,\n    B: Default"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn format_function_with_borrowed_ref_lifetime() -> crate::Result<()> {
+        let doc = empty_doc();
+        let json_str = r#"{
+        "sig": {
+            "inputs": [
+                ["doc", {"borrowed_ref": {"lifetime": "'a", "is_mutable": false, "type": {"resolved_path": {"path": "crate::doc::CrateDoc", "id": 251, "args": null}}}}],
+                ["item", {"borrowed_ref": {"lifetime": "'a", "is_mutable": false, "type": {"resolved_path": {"path": "crate::doc::Item", "id": 168, "args": null}}}}]
+            ],
+            "output": {"generic": "Self"},
+            "is_c_variadic": false,
+            "header": {"is_const": false, "is_unsafe": false, "is_async": false, "abi": "Rust"}
+        },
+        "generics": {"params": [], "where_predicates": []},
+        "has_body": true
+    }"#;
+
+        let raw_json = nojson::RawJson::parse(json_str)?;
+        let formatted = format_function_to_string(&doc, "new", raw_json.value())?;
+
+        assert_eq!(
+            formatted,
+            "fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self"
+        );
+
         Ok(())
     }
 
