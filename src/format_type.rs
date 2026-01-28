@@ -46,6 +46,8 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             self.format_qualified_path(qualified_path)
         } else if let Some(tuple) = ty.to_member("tuple")?.get() {
             self.format_tuple(tuple)
+        } else if let Some(dyn_trait) = ty.to_member("dyn_trait")?.get() {
+            self.format_dyn_trait(dyn_trait)
         } else {
             write!(self.writer, "{}", ty)?;
             Ok(())
@@ -95,7 +97,7 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
                 self.format_type(arg_type)?;
             } else if let Some(lifetime) = arg.to_member("lifetime")?.get() {
                 let lifetime_str = lifetime.to_unquoted_string_str()?;
-                write!(self.writer, "{lifetime_str}")?;
+                write!(self.writer, "{}", lifetime_str)?;
             }
         }
         write!(self.writer, ">")?;
@@ -161,6 +163,65 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             first = false;
         }
         write!(self.writer, ")")?;
+        Ok(())
+    }
+
+    fn format_dyn_trait(&mut self, dyn_trait: nojson::RawJsonValue) -> crate::Result<()> {
+        write!(self.writer, "dyn ")?;
+
+        let traits = dyn_trait.to_member("traits")?.required()?;
+        let mut first = true;
+
+        for trait_obj in traits.to_array()? {
+            if !first {
+                write!(self.writer, " + ")?;
+            }
+
+            let trait_info = trait_obj.to_member("trait")?.required()?;
+            let trait_path = trait_info
+                .to_member("path")?
+                .required()?
+                .to_unquoted_string_str()?;
+
+            write!(self.writer, "{}", trait_path)?;
+
+            // Handle generic args if present
+            if let Some(args) = trait_info.to_member("args")?.get()
+                && !args.kind().is_null()
+            {
+                let Some(angle_bracketed) = args.to_member("angle_bracketed")?.get() else {
+                    first = false;
+                    continue;
+                };
+
+                write!(self.writer, "<")?;
+                let args_array = angle_bracketed.to_member("args")?.required()?;
+                for (i, arg) in args_array.to_array()?.enumerate() {
+                    if i > 0 {
+                        write!(self.writer, ", ")?;
+                    }
+
+                    if let Some(arg_type) = arg.to_member("type")?.get() {
+                        self.format_type(arg_type)?;
+                    } else if let Some(lifetime) = arg.to_member("lifetime")?.get() {
+                        let lifetime_str = lifetime.to_unquoted_string_str()?;
+                        write!(self.writer, "{}", lifetime_str)?;
+                    }
+                }
+                write!(self.writer, ">")?;
+            }
+
+            first = false;
+        }
+
+        // Add lifetime if present
+        if let Some(lifetime) = dyn_trait.to_member("lifetime")?.get() {
+            if !lifetime.kind().is_null() {
+                let lifetime_str = lifetime.to_unquoted_string_str()?;
+                write!(self.writer, " + {}", lifetime_str)?;
+            }
+        }
+
         Ok(())
     }
 }
@@ -295,6 +356,30 @@ mod tests {
         assert_format(
             r#"{"tuple":[{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}},{"resolved_path":{"path":"Vec","args":{"angle_bracketed":{"args":[{"type":{"primitive":"i32"}}]}}}}]}"#,
             "(&str, Vec<i32>)",
+        )
+    }
+
+    #[test]
+    fn format_dyn_trait_multiple_bounds() -> crate::Result<()> {
+        assert_format(
+            r#"{"dyn_trait":{"traits":[{"trait":{"path":"Any","id":415,"args":null},"generic_params":[]},{"trait":{"path":"Send","id":6,"args":null},"generic_params":[]}],"lifetime":"'static"}}"#,
+            "dyn Any + Send + 'static",
+        )
+    }
+
+    #[test]
+    fn format_dyn_trait_single_bound() -> crate::Result<()> {
+        assert_format(
+            r#"{"dyn_trait":{"traits":[{"trait":{"path":"Display","id":123,"args":null},"generic_params":[]}],"lifetime":null}}"#,
+            "dyn Display",
+        )
+    }
+
+    #[test]
+    fn format_dyn_trait_with_lifetime() -> crate::Result<()> {
+        assert_format(
+            r#"{"dyn_trait":{"traits":[{"trait":{"path":"Iterator","id":200,"args":null},"generic_params":[]}],"lifetime":"'a"}}"#,
+            "dyn Iterator + 'a",
         )
     }
 
