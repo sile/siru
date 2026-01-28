@@ -86,8 +86,12 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             return Ok(());
         };
 
+        self.format_angle_bracketed_args(angle_bracketed)
+    }
+
+    fn format_angle_bracketed_args(&mut self, args: nojson::RawJsonValue) -> crate::Result<()> {
         write!(self.writer, "<")?;
-        let args_array = angle_bracketed.to_member("args")?.required()?;
+        let args_array = args.to_member("args")?.required()?;
         for (i, arg) in args_array.to_array()?.enumerate() {
             if i > 0 {
                 write!(self.writer, ", ")?;
@@ -112,23 +116,26 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
     }
 
     fn format_borrowed_ref(&mut self, borrowed_ref: nojson::RawJsonValue) -> crate::Result<()> {
-        let is_mutable: bool = borrowed_ref
-            .to_member("is_mutable")?
-            .required()?
-            .try_into()?;
-        let inner_type = borrowed_ref.to_member("type")?.required()?;
-        let prefix = if is_mutable { "&mut " } else { "&" };
-        write!(self.writer, "{}", prefix)?;
-        self.format_type(inner_type)
+        self.format_prefixed_type(borrowed_ref, "&mut ", "&")
     }
 
     fn format_raw_pointer(&mut self, raw_pointer: nojson::RawJsonValue) -> crate::Result<()> {
-        let is_mutable: bool = raw_pointer
-            .to_member("is_mutable")?
-            .required()?
-            .try_into()?;
-        let inner_type = raw_pointer.to_member("type")?.required()?;
-        let prefix = if is_mutable { "*mut " } else { "*const " };
+        self.format_prefixed_type(raw_pointer, "*mut ", "*const ")
+    }
+
+    fn format_prefixed_type(
+        &mut self,
+        obj: nojson::RawJsonValue,
+        mutable_prefix: &str,
+        const_prefix: &str,
+    ) -> crate::Result<()> {
+        let is_mutable: bool = obj.to_member("is_mutable")?.required()?.try_into()?;
+        let inner_type = obj.to_member("type")?.required()?;
+        let prefix = if is_mutable {
+            mutable_prefix
+        } else {
+            const_prefix
+        };
         write!(self.writer, "{}", prefix)?;
         self.format_type(inner_type)
     }
@@ -194,21 +201,7 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
                     continue;
                 };
 
-                write!(self.writer, "<")?;
-                let args_array = angle_bracketed.to_member("args")?.required()?;
-                for (i, arg) in args_array.to_array()?.enumerate() {
-                    if i > 0 {
-                        write!(self.writer, ", ")?;
-                    }
-
-                    if let Some(arg_type) = arg.to_member("type")?.get() {
-                        self.format_type(arg_type)?;
-                    } else if let Some(lifetime) = arg.to_member("lifetime")?.get() {
-                        let lifetime_str = lifetime.to_unquoted_string_str()?;
-                        write!(self.writer, "{}", lifetime_str)?;
-                    }
-                }
-                write!(self.writer, ">")?;
+                self.format_angle_bracketed_args(angle_bracketed)?;
             }
 
             first = false;
