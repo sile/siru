@@ -241,6 +241,15 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
                 write!(self.writer, " + ")?;
             }
 
+            // Handle lifetime bounds (e.g., 'outlives': "'_")
+            if let Some(outlives) = trait_obj.to_member("outlives")?.get() {
+                let lifetime_str = outlives.to_unquoted_string_str()?;
+                write!(self.writer, "{}", lifetime_str)?;
+                first = false;
+                continue;
+            }
+
+            // Handle trait bounds
             let trait_bound = trait_obj.to_member("trait_bound")?.required()?;
             let trait_info = trait_bound.to_member("trait")?.required()?;
             let trait_path = trait_info
@@ -495,6 +504,14 @@ mod tests {
         assert_format(
             r#"{"impl_trait":[{"trait_bound":{"trait":{"path":"Iterator","id":474,"args":null},"generic_params":[],"modifier":"none"}},{"trait_bound":{"trait":{"path":"Send","id":6,"args":null},"generic_params":[],"modifier":"none"}}]}"#,
             "impl Iterator + Send",
+        )
+    }
+
+    #[test]
+    fn format_impl_trait_with_lifetime() -> crate::Result<()> {
+        assert_format(
+            r#"{"impl_trait":[{"outlives":"'_"},{"trait_bound":{"trait":{"path":"Iterator","id":147,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"tuple":[{"primitive":"usize"},{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}}]}}}}]}}},"generic_params":[],"modifier":"none"}}]}"#,
+            "impl '_ + Iterator<Item = (usize, &str)>",
         )
     }
 

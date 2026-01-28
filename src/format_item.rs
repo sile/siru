@@ -22,7 +22,7 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
     }
 
     pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
-        println!("{inner}");
+        // println!("{inner}"); // TODO
         self.format_function_signature(inner)?;
         Ok(())
     }
