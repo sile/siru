@@ -284,7 +284,7 @@ mod tests {
     #[test]
     fn format_function_with_generic_trait_bounds() -> crate::Result<()> {
         let doc = empty_doc();
-        let json_str = r#"{"function": {
+        let json_str = r#"{
                 "sig": {
                     "inputs": [["key", {"generic": "K"}]],
                     "output": {
@@ -357,8 +357,7 @@ mod tests {
                     "where_predicates": []
                 },
                 "has_body": true
-            }
-        }"#;
+            }"#;
 
         let raw_json = nojson::RawJson::parse(json_str)?;
         let formatted = format_function_to_string(&doc, "var", raw_json.value())?;
