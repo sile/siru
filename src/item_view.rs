@@ -1,4 +1,33 @@
 #[derive(Debug)]
+pub struct PrimitiveView<'a> {
+    doc: &'a crate::doc::CrateDoc,
+    item: &'a crate::doc::Item,
+}
+
+impl<'a> PrimitiveView<'a> {
+    pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
+        Self { doc, item }
+    }
+
+    pub fn name(&self) -> &str {
+        self.item.name.as_ref().expect("bug")
+    }
+
+    pub fn impls(&self) -> crate::Result<Vec<u64>> {
+        let inner = self.item.inner(&self.doc.json);
+        let impls = inner.to_member("impls")?.required()?;
+
+        let mut impl_ids = Vec::new();
+        for impl_id in impls.to_array()? {
+            let id: u64 = impl_id.try_into()?;
+            impl_ids.push(id);
+        }
+
+        Ok(impl_ids)
+    }
+}
+
+#[derive(Debug)]
 pub struct TypeView<'a> {
     doc: &'a crate::doc::CrateDoc,
     item: &'a crate::doc::Item,
@@ -65,5 +94,3 @@ impl<'a> ConstantView<'a> {
         crate::format_type::format_to_string(&self.doc, ty)
     }
 }
-
-pub type AssocConstView<'a> = ConstantView<'a>;

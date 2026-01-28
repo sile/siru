@@ -71,7 +71,11 @@ impl ItemKind {
             "variant" => Some(vec![ItemKind::Variant]),
             "struct" => Some(vec![ItemKind::Struct]),
             "field" => Some(vec![ItemKind::StructField]),
-            "type" => Some(vec![ItemKind::TypeAlias, ItemKind::AssocType]),
+            "type" => Some(vec![
+                ItemKind::TypeAlias,
+                ItemKind::AssocType,
+                ItemKind::Primitive,
+            ]),
             "fn" => Some(vec![ItemKind::Function]),
             "const" => Some(vec![ItemKind::Constant, ItemKind::AssocConst]),
             "trait" => Some(vec![ItemKind::Trait, ItemKind::TraitAlias]),
@@ -103,7 +107,7 @@ impl ItemKind {
             ItemKind::Macro => "macro",
             ItemKind::ProcMacro => "proc_macro",
             ItemKind::Impl => "impl",
-            ItemKind::Primitive => "primitive",
+            ItemKind::Primitive => "type",
         }
     }
 

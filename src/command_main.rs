@@ -274,15 +274,14 @@ fn print_item_signature<W: std::io::Write>(
                 format!("type {};", view.name()?)
             }
         }
-        crate::doc::ItemKind::Constant => {
+        crate::doc::ItemKind::Primitive => {
+            let view = crate::item_view::PrimitiveView::new(doc, item);
+            format!("type {};", view.name())
+        }
+        crate::doc::ItemKind::Constant | crate::doc::ItemKind::AssocConst => {
             let view = crate::item_view::ConstantView::new(doc, item);
             format!("const {}: {};", view.name(), view.ty()?)
         }
-        crate::doc::ItemKind::AssocConst => {
-            let view = crate::item_view::AssocConstView::new(doc, item);
-            format!("const {}: {};", view.name(), view.ty()?)
-        }
-        // todo: primitive
         _ => return Ok(()), // Other kinds may not need signatures
     };
 
