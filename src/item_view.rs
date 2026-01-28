@@ -6,11 +6,9 @@ pub struct TypeView<'a> {
 
 impl<'a> TypeView<'a> {
     pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
-        assert_eq!(item.kind, crate::doc::ItemKind::TypeAlias);
         Self { doc, item }
     }
 
-    /// Returns the type name, building type parameters if they exist
     pub fn name(&self) -> Result<String, nojson::JsonParseError> {
         let name = self.item.name.as_ref().expect("bug");
         let inner = self.item.inner(&self.doc.json);
@@ -50,7 +48,6 @@ pub struct ConstantView<'a> {
 
 impl<'a> ConstantView<'a> {
     pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
-        assert_eq!(item.kind, crate::doc::ItemKind::Constant);
         Self { doc, item }
     }
 
@@ -65,28 +62,7 @@ impl<'a> ConstantView<'a> {
     }
 }
 
-#[derive(Debug)]
-pub struct AssocConstView<'a> {
-    doc: &'a crate::doc::CrateDoc,
-    item: &'a crate::doc::Item,
-}
-
-impl<'a> AssocConstView<'a> {
-    pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
-        assert_eq!(item.kind, crate::doc::ItemKind::AssocConst);
-        Self { doc, item }
-    }
-
-    pub fn name(&self) -> &str {
-        self.item.name.as_ref().expect("bug")
-    }
-
-    pub fn ty(&self) -> Result<String, nojson::JsonParseError> {
-        let inner = self.item.inner(&self.doc.json);
-        let ty = inner.to_member("type")?.required()?;
-        format_type(ty, &self.doc)
-    }
-}
+pub type AssocConstView<'a> = ConstantView<'a>;
 
 fn format_type(
     ty: nojson::RawJsonValue,
