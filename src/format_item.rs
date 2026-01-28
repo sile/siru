@@ -1,9 +1,10 @@
 pub fn format_function_to_string(
     doc: &crate::doc::CrateDoc,
-    item: &crate::doc::Item,
+    name: &str,
+    inner: nojson::RawJsonValue,
 ) -> crate::Result<String> {
     let mut buffer = Vec::new();
-    let mut formatter = FunctionFormatter::new(&mut buffer, doc, item);
+    let mut formatter = FunctionFormatter::new(&mut buffer, doc, name, inner);
     formatter.format()?;
     Ok(String::from_utf8(buffer).expect("bug"))
 }
@@ -12,21 +13,28 @@ pub fn format_function_to_string(
 pub struct FunctionFormatter<'a, W> {
     writer: W,
     doc: &'a crate::doc::CrateDoc,
-    item: &'a crate::doc::Item,
+    name: &'a str,
+    inner: nojson::RawJsonValue,
 }
 
 impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
-    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
-        Self { writer, doc, item }
+    pub fn new(
+        writer: W,
+        doc: &'a crate::doc::CrateDoc,
+        name: &'a str,
+        inner: nojson::RawJsonValue,
+    ) -> Self {
+        Self {
+            writer,
+            doc,
+            name,
+            inner,
+        }
     }
 
     pub fn format(&mut self) -> crate::Result<()> {
-        let inner = self
-            .item
-            .inner(&self.doc.json)
-            .to_member("function")?
-            .required()?;
-        self.format_function_signature(inner)?;
+        let function = self.inner.to_member("function")?.required()?;
+        self.format_function_signature(function)?;
         Ok(())
     }
 
@@ -37,8 +45,7 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
         self.format_function_header(sig)?;
 
         // Format function name
-        let name = self.item.name.as_ref().expect("bug");
-        write!(self.writer, "fn {}", name)?;
+        write!(self.writer, "fn {}", self.name)?;
 
         // Format generics
         let generics = function.to_member("generics")?;
@@ -286,11 +293,7 @@ mod tests {
     #[test]
     fn format_function_with_generic_trait_bounds() -> crate::Result<()> {
         let doc = empty_doc();
-        let json_str = r#"{
-        "name": "var",
-        "visibility": "public",
-        "inner": {
-            "function": {
+        let json_str = r#"{"function": {
                 "sig": {
                     "inputs": [["key", {"generic": "K"}]],
                     "output": {
@@ -364,14 +367,10 @@ mod tests {
                 },
                 "has_body": true
             }
-        },
-        "docs": null,
-        "deprecation": null
-    }"#;
+        }"#;
 
         let raw_json = nojson::RawJson::parse(json_str)?;
-        let item = crate::doc::Item::from_json(&doc.json, raw_json.value(), 0)?;
-        let formatted = format_function_to_string(&doc, &item)?;
+        let formatted = format_function_to_string(&doc, "var", raw_json.value())?;
 
         assert_eq!(
             formatted,

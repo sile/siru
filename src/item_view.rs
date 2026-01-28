@@ -14,7 +14,8 @@ impl<'a> FunctionView<'a> {
     }
 
     pub fn signature(&self) -> crate::Result<String> {
-        crate::format_item::format_function_to_string(&self.doc, &self.item)
+        let inner = self.item.inner(&self.doc.json);
+        crate::format_item::format_function_to_string(&self.doc, self.name(), inner)
     }
 }
 
