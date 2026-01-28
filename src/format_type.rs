@@ -44,6 +44,10 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
             self.format_dyn_trait(dyn_trait)
         } else if let Some(impl_trait) = ty.to_member("impl_trait")?.get() {
             self.format_impl_trait(impl_trait)
+        } else if let Some(slice) = ty.to_member("slice")?.get() {
+            self.format_slice(slice)
+        } else if let Some(array) = ty.to_member("array")?.get() {
+            self.format_array(array)
         } else {
             write!(self.writer, "{}", ty)?;
             Ok(())
@@ -324,6 +328,26 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
 
         Ok(())
     }
+
+    fn format_slice(&mut self, slice: nojson::RawJsonValue) -> crate::Result<()> {
+        write!(self.writer, "[")?;
+        self.format_type(slice)?;
+        write!(self.writer, "]")?;
+        Ok(())
+    }
+
+    fn format_array(&mut self, array: nojson::RawJsonValue) -> crate::Result<()> {
+        let inner_type = array.to_member("type")?.required()?;
+        let len = array
+            .to_member("len")?
+            .required()?
+            .to_unquoted_string_str()?;
+
+        write!(self.writer, "[")?;
+        self.format_type(inner_type)?;
+        write!(self.writer, "; {}]", len)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -512,6 +536,24 @@ mod tests {
         assert_format(
             r#"{"impl_trait":[{"outlives":"'_"},{"trait_bound":{"trait":{"path":"Iterator","id":147,"args":{"angle_bracketed":{"args":[],"constraints":[{"name":"Item","args":null,"binding":{"equality":{"type":{"tuple":[{"primitive":"usize"},{"borrowed_ref":{"lifetime":null,"is_mutable":false,"type":{"primitive":"str"}}}]}}}}]}}},"generic_params":[],"modifier":"none"}}]}"#,
             "impl '_ + Iterator<Item = (usize, &str)>",
+        )
+    }
+
+    #[test]
+    fn format_slice() -> crate::Result<()> {
+        assert_format(r#"{"slice":{"primitive":"u8"}}"#, "[u8]")
+    }
+
+    #[test]
+    fn format_array() -> crate::Result<()> {
+        assert_format(r#"{"array":{"type":{"generic":"T"},"len":"N"}}"#, "[T; N]")
+    }
+
+    #[test]
+    fn format_array_with_resolved_path() -> crate::Result<()> {
+        assert_format(
+            r#"{"array":{"type":{"resolved_path":{"path":"String","args":null}},"len":"32"}}"#,
+            "[String; 32]",
         )
     }
 
