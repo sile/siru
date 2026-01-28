@@ -279,6 +279,16 @@ fn print_item_signature<W: std::io::Write>(
             let view = crate::item_view::ConstantView::new(doc, item);
             writeln!(writer, "const {}: {};", view.name(), view.ty()?)?;
         }
+        crate::doc::ItemKind::Module => {
+            let view = crate::item_view::ModuleView::new(doc, item);
+            let child_count = view.child_count()?;
+            writeln!(
+                writer,
+                "mod {} {{ /* {} items */ }}",
+                view.name(),
+                child_count
+            )?;
+        }
         crate::doc::ItemKind::Macro => {
             writeln!(writer, "{}", inner.to_unquoted_string_str()?)?;
         }

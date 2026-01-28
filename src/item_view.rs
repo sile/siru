@@ -1,4 +1,27 @@
 #[derive(Debug)]
+pub struct ModuleView<'a> {
+    doc: &'a crate::doc::CrateDoc,
+    item: &'a crate::doc::Item,
+}
+
+impl<'a> ModuleView<'a> {
+    pub fn new(doc: &'a crate::doc::CrateDoc, item: &'a crate::doc::Item) -> Self {
+        Self { doc, item }
+    }
+
+    pub fn name(&self) -> &str {
+        self.item.name.as_ref().expect("bug")
+    }
+
+    pub fn child_count(&self) -> crate::Result<usize> {
+        let inner = self.item.inner(&self.doc.json);
+        let items = inner.to_member("items")?.required()?;
+        Ok(items.to_array()?.count())
+    }
+}
+
+
+#[derive(Debug)]
 pub struct ProcMacroView<'a> {
     doc: &'a crate::doc::CrateDoc,
     item: &'a crate::doc::Item,
