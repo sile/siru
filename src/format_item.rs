@@ -1,3 +1,67 @@
+pub fn format_struct_to_string(
+    doc: &crate::doc::CrateDoc,
+    item: &crate::doc::Item,
+) -> crate::Result<String> {
+    let name = item.name.as_ref().expect("bug");
+    let inner = item.inner(&doc.json);
+    let mut buffer = Vec::new();
+    let mut formatter = StructFormatter::new(&mut buffer, doc, name);
+    formatter
+        .format(inner)
+        .map_err(|e| e.set_json_span(inner).set_json_text(doc.json.text()))?;
+    Ok(String::from_utf8(buffer).expect("bug"))
+}
+
+#[derive(Debug)]
+pub struct StructFormatter<'a, W> {
+    writer: W,
+    doc: &'a crate::doc::CrateDoc,
+    name: &'a str,
+}
+
+impl<'a, W: std::io::Write> StructFormatter<'a, W> {
+    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, name: &'a str) -> Self {
+        Self { writer, doc, name }
+    }
+
+    pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
+        write!(self.writer, "struct {} {{\n", self.name)?;
+
+        let kind = inner.to_member("kind")?;
+        if let Some(kind_obj) = kind.get() {
+            if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
+                let fields = struct_kind.to_member("fields")?.required()?;
+                let field_ids: Vec<_> = fields.to_array()?.collect();
+
+                for (i, field_id) in field_ids.iter().enumerate() {
+                    if i > 0 {
+                        write!(self.writer, ",\n")?;
+                    }
+
+                    let field_item_value = self.doc.items.get(&self.doc.json, *field_id)?;
+                    let field_item = crate::doc::Item::try_from(field_item_value)?;
+                    let field_name = field_item.name.as_deref().unwrap_or("?");
+                    let field_inner = field_item.inner(&self.doc.json);
+                    let formatted_type =
+                        crate::format_type::format_to_string(self.doc, field_inner)?;
+
+                    write!(self.writer, "    {}: {}", field_name, formatted_type)?;
+                }
+
+                if !field_ids.is_empty() {
+                    write!(self.writer, ",\n")?;
+                }
+            } else if let Some(_tuple_kind) = kind_obj.to_member("tuple")?.get() {
+                // Tuple struct
+                write!(self.writer, "    // tuple struct fields\n")?;
+            }
+        }
+
+        write!(self.writer, "}}")?;
+        Ok(())
+    }
+}
+
 pub fn format_enum_to_string(
     doc: &crate::doc::CrateDoc,
     item: &crate::doc::Item,
