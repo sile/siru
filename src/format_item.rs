@@ -1,3 +1,283 @@
+pub fn format_trait_to_string(
+    doc: &crate::doc::CrateDoc,
+    item: &crate::doc::Item,
+) -> crate::Result<String> {
+    let name = item.name.as_ref().expect("bug");
+    let inner = item.inner(&doc.json);
+    let mut buffer = Vec::new();
+    let mut formatter = TraitFormatter::new(&mut buffer, doc, name);
+    formatter
+        .format(inner)
+        .map_err(|e| e.set_json_span(inner).set_json_text(doc.json.text()))?;
+    Ok(String::from_utf8(buffer).expect("bug"))
+}
+
+#[derive(Debug)]
+pub struct TraitFormatter<'a, W> {
+    writer: W,
+    doc: &'a crate::doc::CrateDoc,
+    name: &'a str,
+}
+
+impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
+    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, name: &'a str) -> Self {
+        Self { writer, doc, name }
+    }
+
+    pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
+        // Format trait modifiers
+        let is_unsafe: bool = inner.to_member("is_unsafe")?.required()?.try_into()?;
+        let is_auto: bool = inner.to_member("is_auto")?.required()?.try_into()?;
+
+        if is_unsafe {
+            write!(self.writer, "unsafe ")?;
+        }
+        if is_auto {
+            write!(self.writer, "auto ")?;
+        }
+
+        write!(self.writer, "trait {}", self.name)?;
+
+        // Format generics
+        let generics = inner.to_member("generics")?;
+        if let Some(g) = generics.get() {
+            self.format_generics(g)?;
+        }
+
+        // Format bounds (supertraits)
+        let bounds = inner.to_member("bounds")?;
+        if let Some(bounds_array) = bounds.get() {
+            let bounds_list: Vec<_> = bounds_array.to_array()?.collect();
+            if !bounds_list.is_empty() {
+                write!(self.writer, ": ")?;
+                for (i, bound) in bounds_list.iter().enumerate() {
+                    if i > 0 {
+                        write!(self.writer, " + ")?;
+                    }
+
+                    if let Some(trait_bound) = bound.to_member("trait_bound")?.get() {
+                        let trait_info = trait_bound.to_member("trait")?.required()?;
+                        let trait_path = trait_info
+                            .to_member("path")?
+                            .required()?
+                            .to_unquoted_string_str()?;
+                        write!(self.writer, "{}", trait_path)?;
+
+                        // Format trait generic args if present
+                        if let Some(args) = trait_info.to_member("args")?.get() {
+                            if !args.kind().is_null() {
+                                self.format_trait_args(args)?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Format where clauses
+        if let Some(g) = generics.get() {
+            self.format_where_clauses(g)?;
+        }
+
+        write!(self.writer, " {{\n")?;
+
+        // Format trait items (methods, associated types, etc.)
+        let items = inner.to_member("items")?;
+        if let Some(items_array) = items.get() {
+            let item_ids: Vec<_> = items_array.to_array()?.collect();
+
+            for (i, item_id) in item_ids.iter().enumerate() {
+                if i > 0 {
+                    write!(self.writer, "\n")?;
+                }
+
+                let item_value = self.doc.items.get(&self.doc.json, *item_id)?;
+                let item = crate::doc::Item::try_from(item_value)?;
+                let item_name = item.name.as_deref().unwrap_or("?");
+                let item_inner = item.inner(&self.doc.json);
+
+                // Format based on item kind
+                if let Some(kind) = item_inner.to_member("kind")?.get() {
+                    if let Some(_function) = kind.to_member("function")?.get() {
+                        let formatted = crate::format_item::format_function_to_string(
+                            self.doc, item_name, item_inner,
+                        )?;
+                        write!(self.writer, "    {};\n", formatted)?;
+                    } else if let Some(_assoc_type) = kind.to_member("assoc_type")?.get() {
+                        write!(self.writer, "    type {};\n", item_name)?;
+                    } else if let Some(_assoc_const) = kind.to_member("assoc_const")?.get() {
+                        write!(self.writer, "    const {};\n", item_name)?;
+                    }
+                }
+            }
+        }
+
+        write!(self.writer, "}}")?;
+        Ok(())
+    }
+
+    fn format_generics(&mut self, generics: nojson::RawJsonValue) -> crate::Result<()> {
+        let params = generics.to_member("params")?;
+
+        if let Some(params_array) = params.get() {
+            let params_list: Vec<_> = params_array.to_array()?.collect();
+
+            if !params_list.is_empty() {
+                write!(self.writer, "<")?;
+
+                for (i, param) in params_list.iter().enumerate() {
+                    if i > 0 {
+                        write!(self.writer, ", ")?;
+                    }
+
+                    let param_name = param
+                        .to_member("name")?
+                        .required()?
+                        .to_unquoted_string_str()?;
+                    write!(self.writer, "{}", param_name)?;
+
+                    // Format bounds if present
+                    let kind = param.to_member("kind")?;
+                    if let Some(kind_obj) = kind.get() {
+                        if let Some(type_bounds) = kind_obj.to_member("type")?.get() {
+                            self.format_type_bounds(type_bounds)?;
+                        }
+                    }
+                }
+
+                write!(self.writer, ">")?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn format_type_bounds(&mut self, type_obj: nojson::RawJsonValue) -> crate::Result<()> {
+        let bounds = type_obj.to_member("bounds")?;
+
+        if let Some(bounds_array) = bounds.get() {
+            let bounds_list: Vec<_> = bounds_array.to_array()?.collect();
+
+            if !bounds_list.is_empty() {
+                write!(self.writer, ": ")?;
+
+                for (i, bound) in bounds_list.iter().enumerate() {
+                    if i > 0 {
+                        write!(self.writer, " + ")?;
+                    }
+
+                    if let Some(trait_bound) = bound.to_member("trait_bound")?.get() {
+                        let trait_info = trait_bound.to_member("trait")?.required()?;
+                        let trait_path = trait_info
+                            .to_member("path")?
+                            .required()?
+                            .to_unquoted_string_str()?;
+                        write!(self.writer, "{}", trait_path)?;
+
+                        // Format trait generic args if present
+                        if let Some(args) = trait_info.to_member("args")?.get() {
+                            if !args.kind().is_null() {
+                                self.format_trait_args(args)?;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn format_trait_args(&mut self, args: nojson::RawJsonValue) -> crate::Result<()> {
+        if let Some(angle_bracketed) = args.to_member("angle_bracketed")?.get() {
+            write!(self.writer, "<")?;
+
+            let args_array = angle_bracketed.to_member("args")?;
+            if let Some(args_list) = args_array.get() {
+                for (i, arg) in args_list.to_array()?.enumerate() {
+                    if i > 0 {
+                        write!(self.writer, ", ")?;
+                    }
+
+                    if let Some(arg_type) = arg.to_member("type")?.get() {
+                        let formatted = crate::format_type::format_to_string(self.doc, arg_type)?;
+                        write!(self.writer, "{}", formatted)?;
+                    }
+                }
+            }
+
+            write!(self.writer, ">")?;
+        }
+
+        Ok(())
+    }
+
+    fn format_where_clauses(&mut self, generics: nojson::RawJsonValue) -> crate::Result<()> {
+        let where_predicates = generics.to_member("where_predicates")?;
+
+        if let Some(predicates) = where_predicates.get() {
+            let predicates_list: Vec<_> = predicates.to_array()?.collect();
+
+            if !predicates_list.is_empty() {
+                write!(self.writer, "\nwhere\n    ")?;
+
+                for (i, predicate) in predicates_list.iter().enumerate() {
+                    if i > 0 {
+                        write!(self.writer, ",\n    ")?;
+                    }
+
+                    self.format_where_predicate(*predicate)?;
+                }
+
+                write!(self.writer, " ")?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn format_where_predicate(&mut self, predicate: nojson::RawJsonValue) -> crate::Result<()> {
+        if let Some(bound_predicate) = predicate.to_member("bound_predicate")?.get() {
+            if let Some(lhs) = bound_predicate.to_member("type")?.get() {
+                let formatted_lhs = crate::format_type::format_to_string(self.doc, lhs)?;
+                write!(self.writer, "{}", formatted_lhs)?;
+            }
+
+            let bounds = bound_predicate.to_member("bounds")?;
+            if let Some(bounds_array) = bounds.get() {
+                let bounds_list: Vec<_> = bounds_array.to_array()?.collect();
+
+                if !bounds_list.is_empty() {
+                    write!(self.writer, ": ")?;
+
+                    for (i, bound) in bounds_list.iter().enumerate() {
+                        if i > 0 {
+                            write!(self.writer, " + ")?;
+                        }
+
+                        if let Some(trait_bound) = bound.to_member("trait_bound")?.get() {
+                            let trait_info = trait_bound.to_member("trait")?.required()?;
+                            let trait_path = trait_info
+                                .to_member("path")?
+                                .required()?
+                                .to_unquoted_string_str()?;
+                            write!(self.writer, "{}", trait_path)?;
+
+                            if let Some(args) = trait_info.to_member("args")?.get() {
+                                if !args.kind().is_null() {
+                                    self.format_trait_args(args)?;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 pub fn format_union_to_string(
     doc: &crate::doc::CrateDoc,
     item: &crate::doc::Item,
