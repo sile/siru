@@ -36,37 +36,37 @@ Options:
 
 ## Usage
 
-```console
+```bash
 # Build JSON documentation for the current crate
-$ siru -x build-doc
+siru -x build-doc
 
 # View all items in target/doc
-$ siru
+siru
 
 # Filter to specific crate
-$ siru -c my_crate
+siru -c my_crate
 
 # Filter to functions only
-$ siru -k fn
+siru -k fn
 
 # Filter by item path
-$ siru HashMap
+siru HashMap
 
 # Combine multiple filters
-$ siru -c std -k fn -k struct String
+siru -c std -k fn -k struct String
 
 # View standard library documentation (requires nightly)
-$ rustup component add --toolchain nightly rust-docs-json
-$ siru HashMap -d ~/.rustup/toolchains/nightly-${TARGET}/share/doc/rust/json/
+rustup component add --toolchain nightly rust-docs-json
+siru HashMap -d ~/.rustup/toolchains/nightly-${TARGET}/share/doc/rust/json/
 
 # Pipe output to pager
-$ siru | less
+siru | less
 
 # Save to file and open in editor
-$ siru > docs.md && $EDITOR docs.md
+siru > docs.md && $EDITOR docs.md
 
 # Pipe to syntax highlighter
-$ siru | bat --language markdown
+siru | bat --language markdown
 ```
 
 [rustdoc-json]: https://rust-lang.github.io/rfcs/2963-rustdoc-json.html
