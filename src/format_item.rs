@@ -33,7 +33,11 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
         if let Some(disc) = discriminant.get() {
             if !disc.kind().is_null() {
                 write!(self.writer, " = ")?;
-                let disc_str: String = disc.try_into()?;
+                let disc_str: String = if let Some(disc_value) = disc.to_member("value")?.get() {
+                    disc_value.try_into()?
+                } else {
+                    disc.try_into()?
+                };
                 write!(self.writer, "{}", disc_str)?;
             }
         }
@@ -86,8 +90,7 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
     }
 
     fn format_tuple_variant(&mut self, tuple_obj: nojson::RawJsonValue) -> crate::Result<()> {
-        let fields = tuple_obj.to_member("fields")?.required()?;
-        let field_ids: Vec<_> = fields.to_array()?.collect();
+        let field_ids: Vec<_> = tuple_obj.to_array()?.collect();
 
         write!(self.writer, "(")?;
 
