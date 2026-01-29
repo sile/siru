@@ -1,3 +1,110 @@
+pub fn format_enum_variant_to_string(
+    doc: &crate::doc::CrateDoc,
+    name: &str,
+    inner: nojson::RawJsonValue,
+) -> crate::Result<String> {
+    let mut buffer = Vec::new();
+    let mut formatter = EnumVariantFormatter::new(&mut buffer, doc, name);
+    formatter.format(inner)?;
+    Ok(String::from_utf8(buffer).expect("bug"))
+}
+
+#[derive(Debug)]
+pub struct EnumVariantFormatter<'a, W> {
+    writer: W,
+    doc: &'a crate::doc::CrateDoc,
+    name: &'a str,
+}
+
+impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
+    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, name: &'a str) -> Self {
+        Self { writer, doc, name }
+    }
+
+    pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
+        // Write variant name
+        write!(self.writer, "{}", self.name)?;
+
+        // Check for discriminant
+        let discriminant = inner.to_member("discriminant")?;
+        if let Some(disc) = discriminant.get() {
+            if !disc.kind().is_null() {
+                write!(self.writer, " = ")?;
+                let disc_str: String = disc.try_into()?;
+                write!(self.writer, "{}", disc_str)?;
+            }
+        }
+
+        // Format variant kind (struct, tuple, or unit)
+        let kind = inner.to_member("kind")?;
+        if let Some(kind_obj) = kind.get() {
+            // Check for struct variant
+            if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
+                self.format_struct_variant(struct_kind)?;
+            }
+            // Check for tuple variant
+            else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
+                self.format_tuple_variant(tuple_kind)?;
+            }
+            // Unit variant has no additional formatting
+        }
+
+        Ok(())
+    }
+
+    fn format_struct_variant(&mut self, struct_obj: nojson::RawJsonValue) -> crate::Result<()> {
+        let fields = struct_obj.to_member("fields")?.required()?;
+        let field_ids: Vec<_> = fields.to_array()?.collect();
+
+        write!(self.writer, " {{ ")?;
+
+        for (i, field_id_value) in field_ids.iter().enumerate() {
+            if i > 0 {
+                write!(self.writer, ", ")?;
+            }
+
+            let field_item_value = self.doc.items.get(&self.doc.json, *field_id_value)?;
+
+            let field_item = crate::doc::Item::try_from(field_item_value)?;
+            let field_name = field_item.name.as_deref().unwrap_or("?");
+            let field_inner = field_item.inner(&self.doc.json);
+            let field_type = field_inner.to_member("type")?.required()?;
+
+            write!(self.writer, "{}: ", field_name)?;
+            let formatted_type = crate::format_type::format_to_string(self.doc, field_type)?;
+            write!(self.writer, "{}", formatted_type)?;
+        }
+
+        write!(self.writer, " }}")?;
+        Ok(())
+    }
+
+    fn format_tuple_variant(&mut self, tuple_obj: nojson::RawJsonValue) -> crate::Result<()> {
+        let fields = tuple_obj.to_member("fields")?.required()?;
+        let field_ids: Vec<_> = fields.to_array()?.collect();
+
+        write!(self.writer, "(")?;
+
+        for (i, field_id_value) in field_ids.iter().enumerate() {
+            if i > 0 {
+                write!(self.writer, ", ")?;
+            }
+
+            let field_item_value = self.doc.items.get(&self.doc.json, *field_id_value)?;
+
+            let field_item = crate::doc::Item::try_from(field_item_value)?;
+            let field_inner = field_item.inner(&self.doc.json);
+            let field_type = field_inner.to_member("type")?.required()?;
+
+            let formatted_type = crate::format_type::format_to_string(self.doc, field_type)?;
+            write!(self.writer, "{}", formatted_type)?;
+        }
+
+        write!(self.writer, ")")?;
+        Ok(())
+    }
+}
+
 pub fn format_function_to_string(
     doc: &crate::doc::CrateDoc,
     name: &str,

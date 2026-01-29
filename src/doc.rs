@@ -1,7 +1,7 @@
 use crate::json::JsonValueIndex;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ItemId(usize);
+pub struct ItemId(pub usize);
 
 impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemId {
     type Error = nojson::JsonParseError;
@@ -265,7 +265,7 @@ impl std::fmt::Display for ItemPath {
 pub struct CrateItems(std::collections::HashMap<ItemId, JsonValueIndex>);
 
 impl CrateItems {
-    fn get<'a>(
+    pub fn get<'a>(
         &self,
         json: &'a nojson::RawJsonOwned,
         item_id_value: nojson::RawJsonValue<'a, 'a>,
