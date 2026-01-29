@@ -29,8 +29,14 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
 
         let kind = inner.to_member("kind")?;
         if let Some(kind_obj) = kind.get() {
-            if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
-                let fields = struct_kind.to_member("fields")?.required()?;
+            // Check for plain struct variant
+            if let Some(plain_kind) = kind_obj.to_member("plain")?.get() {
+                let fields = plain_kind.to_member("fields")?.required()?;
+                let has_stripped: bool = plain_kind
+                    .to_member("has_stripped_fields")?
+                    .required()?
+                    .try_into()?;
+
                 let field_ids: Vec<_> = fields.to_array()?.collect();
 
                 for (i, field_id) in field_ids.iter().enumerate() {
@@ -51,9 +57,44 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
                 if !field_ids.is_empty() {
                     write!(self.writer, ",\n")?;
                 }
-            } else if let Some(_tuple_kind) = kind_obj.to_member("tuple")?.get() {
-                // Tuple struct
-                write!(self.writer, "    // tuple struct fields\n")?;
+
+                if has_stripped {
+                    write!(self.writer, "    // ... other fields\n")?;
+                }
+            } else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
+                // Tuple struct - tuple_kind is an array
+                let has_stripped: bool = kind_obj
+                    .to_member("has_stripped_fields")?
+                    .required()?
+                    .try_into()?;
+
+                let field_ids: Vec<_> = tuple_kind.to_array()?.collect();
+
+                write!(self.writer, "    ")?;
+                for (i, field_id) in field_ids.iter().enumerate() {
+                    if i > 0 {
+                        write!(self.writer, ", ")?;
+                    }
+
+                    let field_item_value = self.doc.items.get(&self.doc.json, *field_id)?;
+                    let field_item = crate::doc::Item::try_from(field_item_value)?;
+                    let field_inner = field_item.inner(&self.doc.json);
+                    let formatted_type =
+                        crate::format_type::format_to_string(self.doc, field_inner)?;
+
+                    write!(self.writer, "{}", formatted_type)?;
+                }
+
+                if has_stripped {
+                    if !field_ids.is_empty() {
+                        write!(self.writer, ", ")?;
+                    }
+                    write!(self.writer, "/* ... */")?;
+                }
+
+                write!(self.writer, ",\n")?;
+            } else if let Some(_unit_kind) = kind_obj.to_member("unit")?.get() {
+                // Unit struct - no fields
             }
         }
 
@@ -114,25 +155,63 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
                         // Struct variant
                         if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
                             let fields = struct_kind.to_member("fields")?.required()?;
+                            let has_stripped: bool = struct_kind
+                                .to_member("has_stripped_fields")?
+                                .required()?
+                                .try_into()?;
+
                             let field_count: usize = fields.to_array()?.count();
+                            let display_count = if has_stripped {
+                                format!("{field_count}+")
+                            } else {
+                                format!("{field_count}")
+                            };
                             write!(
                                 self.writer,
                                 " {{ /* {} field{} */ }}",
-                                field_count,
+                                display_count,
                                 if field_count == 1 { "" } else { "s" }
                             )?;
                         }
                         // Tuple variant
                         else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
+                            let has_stripped: bool = kind_obj
+                                .to_member("has_stripped_fields")?
+                                .required()?
+                                .try_into()?;
+
                             let field_count: usize = tuple_kind.to_array()?.count();
+                            let display_count = if has_stripped {
+                                format!("{field_count}+")
+                            } else {
+                                format!("{field_count}")
+                            };
                             write!(
                                 self.writer,
                                 "(/* {} field{} */)",
-                                field_count,
+                                display_count,
                                 if field_count == 1 { "" } else { "s" }
                             )?;
                         }
                         // Unit variant
+                    }
+                }
+            }
+
+            // Check if enum itself has stripped variants
+            let enum_inner = inner;
+            if let Some(kind) = enum_inner.to_member("kind")?.get() {
+                if let Some(enum_kind) = kind.to_member("enum")?.get() {
+                    let has_stripped: bool = enum_kind
+                        .to_member("has_stripped_fields")?
+                        .required()?
+                        .try_into()?;
+
+                    if has_stripped {
+                        if !variant_ids.is_empty() {
+                            write!(self.writer, ",\n")?;
+                        }
+                        write!(self.writer, "    // ... other variants\n")?;
                     }
                 }
             }
@@ -198,7 +277,7 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
                 }
                 // Check for tuple variant
                 else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
-                    self.format_tuple_variant(tuple_kind)?;
+                    self.format_tuple_variant(tuple_kind, kind_obj)?;
                 }
                 // Unit variant has no additional formatting
             }
@@ -210,6 +289,11 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
 
     fn format_struct_variant(&mut self, struct_obj: nojson::RawJsonValue) -> crate::Result<()> {
         let fields = struct_obj.to_member("fields")?.required()?;
+        let has_stripped: bool = struct_obj
+            .to_member("has_stripped_fields")?
+            .required()?
+            .try_into()?;
+
         let field_ids: Vec<_> = fields.to_array()?.collect();
 
         write!(self.writer, " {{ ")?;
@@ -223,18 +307,32 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
             let field_item = crate::doc::Item::try_from(field_item_value)?;
             let field_name = field_item.name.as_deref().unwrap_or("?");
             let field_inner = field_item.inner(&self.doc.json);
-            // Use the entire field_inner as the type, not field_inner.to_member("type")
             let formatted_type = crate::format_type::format_to_string(self.doc, field_inner)?;
 
-            write!(self.writer, "{}: ", field_name)?;
-            write!(self.writer, "{}", formatted_type)?;
+            write!(self.writer, "{}: {}", field_name, formatted_type)?;
+        }
+
+        if has_stripped {
+            if !field_ids.is_empty() {
+                write!(self.writer, ", ")?;
+            }
+            write!(self.writer, "/* ... */")?;
         }
 
         write!(self.writer, " }}")?;
         Ok(())
     }
 
-    fn format_tuple_variant(&mut self, tuple_obj: nojson::RawJsonValue) -> crate::Result<()> {
+    fn format_tuple_variant(
+        &mut self,
+        tuple_obj: nojson::RawJsonValue,
+        kind_obj: nojson::RawJsonValue,
+    ) -> crate::Result<()> {
+        let has_stripped: bool = kind_obj
+            .to_member("has_stripped_fields")?
+            .required()?
+            .try_into()?;
+
         let field_ids: Vec<_> = tuple_obj.to_array()?.collect();
 
         write!(self.writer, "(")?;
@@ -247,10 +345,16 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
             let field_item_value = self.doc.items.get(&self.doc.json, *field_id_value)?;
             let field_item = crate::doc::Item::try_from(field_item_value)?;
             let field_inner = field_item.inner(&self.doc.json);
-            // Use the entire field_inner as the type
             let formatted_type = crate::format_type::format_to_string(self.doc, field_inner)?;
 
             write!(self.writer, "{}", formatted_type)?;
+        }
+
+        if has_stripped {
+            if !field_ids.is_empty() {
+                write!(self.writer, ", ")?;
+            }
+            write!(self.writer, "/* ... */")?;
         }
 
         write!(self.writer, ")")?;
