@@ -1,8 +1,9 @@
 pub fn format_enum_variant_to_string(
     doc: &crate::doc::CrateDoc,
-    name: &str,
-    inner: nojson::RawJsonValue,
+    item: &crate::doc::Item,
 ) -> crate::Result<String> {
+    let name = item.name.as_ref().expect("bug");
+    let inner = item.inner(&doc.json);
     let mut buffer = Vec::new();
     let mut formatter = EnumVariantFormatter::new(&mut buffer, doc, name);
     formatter.format(inner)?;
