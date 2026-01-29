@@ -96,18 +96,19 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
                 let item_name = item.name.as_deref().unwrap_or("?");
                 let item_inner = item.inner(&self.doc.json);
 
-                // Format based on item kind
-                if let Some(kind) = item_inner.to_member("kind")?.get() {
-                    if let Some(_function) = kind.to_member("function")?.get() {
-                        let formatted = crate::format_item::format_function_to_string(
-                            self.doc, item_name, item_inner,
-                        )?;
-                        write!(self.writer, "    {};\n", formatted)?;
-                    } else if let Some(_assoc_type) = kind.to_member("assoc_type")?.get() {
-                        write!(self.writer, "    type {};\n", item_name)?;
-                    } else if let Some(_assoc_const) = kind.to_member("assoc_const")?.get() {
-                        write!(self.writer, "    const {};\n", item_name)?;
-                    }
+                // Determine item type by checking for function signature
+                if item_inner.to_member("sig")?.get().is_some() {
+                    // It's a function/method
+                    let formatted = crate::format_item::format_function_to_string(
+                        self.doc, item_name, item_inner,
+                    )?;
+                    write!(self.writer, "    {};\n", formatted)?;
+                } else if item_inner.to_member("assoc_type")?.get().is_some() {
+                    // It's an associated type
+                    write!(self.writer, "    type {};\n", item_name)?;
+                } else if item_inner.to_member("assoc_const")?.get().is_some() {
+                    // It's an associated constant
+                    write!(self.writer, "    const {};\n", item_name)?;
                 }
             }
         }
