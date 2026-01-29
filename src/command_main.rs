@@ -316,6 +316,10 @@ fn print_item_signature<W: std::io::Write>(
             let s = crate::format_item::format_struct_to_string(doc, item)?;
             writeln!(writer, "{s}")?;
         }
+        crate::doc::ItemKind::Union => {
+            let s = crate::format_item::format_union_to_string(doc, item)?;
+            writeln!(writer, "{s}")?;
+        }
         kind => todo!("{kind:?}: {inner}"),
     }
     writeln!(writer, "```\n")?;

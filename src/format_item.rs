@@ -1,3 +1,17 @@
+pub fn format_union_to_string(
+    doc: &crate::doc::CrateDoc,
+    item: &crate::doc::Item,
+) -> crate::Result<String> {
+    let name = item.name.as_ref().expect("bug");
+    let inner = item.inner(&doc.json);
+    let mut buffer = Vec::new();
+    let mut formatter = StructFormatter::new(&mut buffer, doc, name, "union");
+    formatter
+        .format(inner)
+        .map_err(|e| e.set_json_span(inner).set_json_text(doc.json.text()))?;
+    Ok(String::from_utf8(buffer).expect("bug"))
+}
+
 pub fn format_struct_to_string(
     doc: &crate::doc::CrateDoc,
     item: &crate::doc::Item,
@@ -5,7 +19,7 @@ pub fn format_struct_to_string(
     let name = item.name.as_ref().expect("bug");
     let inner = item.inner(&doc.json);
     let mut buffer = Vec::new();
-    let mut formatter = StructFormatter::new(&mut buffer, doc, name);
+    let mut formatter = StructFormatter::new(&mut buffer, doc, name, "struct");
     formatter
         .format(inner)
         .map_err(|e| e.set_json_span(inner).set_json_text(doc.json.text()))?;
@@ -17,15 +31,21 @@ pub struct StructFormatter<'a, W> {
     writer: W,
     doc: &'a crate::doc::CrateDoc,
     name: &'a str,
+    kind: &'a str,
 }
 
 impl<'a, W: std::io::Write> StructFormatter<'a, W> {
-    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, name: &'a str) -> Self {
-        Self { writer, doc, name }
+    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, name: &'a str, kind: &'a str) -> Self {
+        Self {
+            writer,
+            doc,
+            name,
+            kind,
+        }
     }
 
     pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
-        write!(self.writer, "struct {}", self.name)?;
+        write!(self.writer, "{} {}", self.kind, self.name)?;
         let kind = inner.to_member("kind")?;
         if let Some(kind_obj) = kind.get() {
             // Check for plain struct variant
