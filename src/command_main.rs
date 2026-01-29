@@ -40,10 +40,16 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         .take(args)
         .present_and_then(|o| o.value().parse::<String>())?;
 
-    let verbose = noargs::flag("verbose")
-        .doc("Enable verbose output")
-        .take(args)
-        .is_present();
+    let show_options = ShowOptions {
+        show_inner_json: noargs::flag("show-inner-json")
+            .doc("Print inner JSON representation before item signature")
+            .take(args)
+            .is_present(),
+        verbose: noargs::flag("verbose")
+            .doc("Enable verbose output")
+            .take(args)
+            .is_present(),
+    };
 
     let mut target_path_parts = Vec::new();
     while let Some(part) = noargs::arg("[ITEM_PATH_PART]...")
@@ -59,7 +65,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     }
 
     let doc_file_paths = collect_doc_file_paths(&doc_paths)?;
-    if verbose {
+    if show_options.verbose {
         eprintln!("Documentation file paths:");
         for path in &doc_file_paths {
             eprintln!("  {}", path.display());
@@ -78,7 +84,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             continue;
         }
         if !known_crates.insert(doc.crate_name.clone()) {
-            if verbose {
+            if show_options.verbose {
                 eprintln!("Warning: duplicate crate '{}' ignored", doc.crate_name);
             }
             continue;
@@ -93,7 +99,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
                 target_path_parts.iter().all(|part| path.contains(part))
             });
         }
-        if verbose {
+        if show_options.verbose {
             eprintln!("Items in crate '{}':", doc.crate_name);
             for (path, item) in &doc.show_items {
                 let inner = item.inner(&doc.json);
@@ -118,16 +124,21 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
             .stdin
             .take()
             .ok_or("failed to get child process stdin")?;
-        print_output(&mut stdin, &docs)?;
+        print_output(&mut stdin, &docs, &show_options)?;
         std::mem::drop(stdin);
         let _ = child.wait();
     } else {
         let stdout = std::io::stdout();
         let mut writer = stdout.lock();
-        print_output(&mut writer, &docs)?;
+        print_output(&mut writer, &docs, &show_options)?;
     }
 
     Ok(())
+}
+
+struct ShowOptions {
+    show_inner_json: bool,
+    verbose: bool,
 }
 
 fn collect_doc_file_paths(
@@ -165,13 +176,14 @@ fn collect_doc_file_paths(
 fn print_output<W: std::io::Write>(
     writer: &mut W,
     docs: &[crate::doc::CrateDoc],
+    show_options: &ShowOptions,
 ) -> crate::Result<()> {
-    print_summary(writer, docs)?;
+    print_summary(writer, docs, show_options)?;
     for doc in docs {
         if doc.show_items.is_empty() {
             continue;
         }
-        print_detail(writer, doc)?;
+        print_detail(writer, doc, show_options)?;
     }
     Ok(())
 }
@@ -179,6 +191,7 @@ fn print_output<W: std::io::Write>(
 fn print_summary<W: std::io::Write>(
     writer: &mut W,
     docs: &[crate::doc::CrateDoc],
+    _show_options: &ShowOptions,
 ) -> crate::Result<()> {
     writeln!(writer, "# Crates Overview\n")?;
     for doc in docs {
@@ -226,9 +239,16 @@ fn print_summary<W: std::io::Write>(
 fn print_detail<W: std::io::Write>(
     writer: &mut W,
     doc: &crate::doc::CrateDoc,
+    show_options: &ShowOptions,
 ) -> crate::Result<()> {
     for (path, item) in &doc.show_items {
         writeln!(writer, "# [{}] `{}`\n", item.kind.as_keyword_str(), path)?;
+
+        // Print inner JSON if requested
+        if show_options.show_inner_json {
+            writeln!(writer, "**Inner JSON**:\n")?;
+            writeln!(writer, "```json\n{}\n```\n", item.inner(&doc.json))?;
+        }
 
         print_item_signature(writer, doc, item)?;
 
