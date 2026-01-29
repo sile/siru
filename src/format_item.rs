@@ -65,9 +65,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
 
                         // Format trait generic args if present
                         if let Some(args) = trait_info.to_member("args")?.get()
-                            && !args.kind().is_null() {
-                                self.format_trait_args(args)?;
-                            }
+                            && !args.kind().is_null()
+                        {
+                            self.format_trait_args(args)?;
+                        }
                     }
                 }
             }
@@ -139,9 +140,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
                     // Format bounds if present
                     let kind = param.to_member("kind")?;
                     if let Some(kind_obj) = kind.get()
-                        && let Some(type_bounds) = kind_obj.to_member("type")?.get() {
-                            self.format_type_bounds(type_bounds)?;
-                        }
+                        && let Some(type_bounds) = kind_obj.to_member("type")?.get()
+                    {
+                        self.format_type_bounds(type_bounds)?;
+                    }
                 }
 
                 write!(self.writer, ">")?;
@@ -175,9 +177,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
 
                         // Format trait generic args if present
                         if let Some(args) = trait_info.to_member("args")?.get()
-                            && !args.kind().is_null() {
-                                self.format_trait_args(args)?;
-                            }
+                            && !args.kind().is_null()
+                        {
+                            self.format_trait_args(args)?;
+                        }
                     }
                 }
             }
@@ -262,9 +265,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
                             write!(self.writer, "{}", trait_path)?;
 
                             if let Some(args) = trait_info.to_member("args")?.get()
-                                && !args.kind().is_null() {
-                                    self.format_trait_args(args)?;
-                                }
+                                && !args.kind().is_null()
+                            {
+                                self.format_trait_args(args)?;
+                            }
                         }
                     }
                 }
@@ -448,70 +452,72 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
                 // Format variant kind with field count
                 let kind = variant_inner.to_member("kind")?;
                 if let Some(kind_obj) = kind.get()
-                    && !kind_obj.kind().is_string() {
-                        // Struct variant
-                        if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
-                            let fields = struct_kind.to_member("fields")?.required()?;
-                            let has_stripped: bool = struct_kind
-                                .to_member("has_stripped_fields")?
-                                .get()
-                                .map(|v| v.try_into().unwrap_or(false))
-                                .unwrap_or(false);
+                    && !kind_obj.kind().is_string()
+                {
+                    // Struct variant
+                    if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
+                        let fields = struct_kind.to_member("fields")?.required()?;
+                        let has_stripped: bool = struct_kind
+                            .to_member("has_stripped_fields")?
+                            .get()
+                            .map(|v| v.try_into().unwrap_or(false))
+                            .unwrap_or(false);
 
-                            let field_count: usize = fields.to_array()?.count();
-                            let display_count = if has_stripped {
-                                format!("{}+", field_count)
-                            } else {
-                                format!("{}", field_count)
-                            };
-                            write!(
-                                self.writer,
-                                " {{ /* {} field{} */ }}",
-                                display_count,
-                                if field_count == 1 { "" } else { "s" }
-                            )?;
-                        }
-                        // Tuple variant
-                        else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
-                            // Use the same approach as StructFormatter: check for null values
-                            let mut field_ids: Vec<_> = tuple_kind.to_array()?.collect();
-                            let has_stripped = field_ids.iter().any(|x| x.kind().is_null());
-                            field_ids.retain(|x| !x.kind().is_null());
-
-                            let field_count = field_ids.len();
-                            let display_count = if has_stripped {
-                                format!("{}+", field_count)
-                            } else {
-                                format!("{}", field_count)
-                            };
-                            write!(
-                                self.writer,
-                                "(/* {} field{} */)",
-                                display_count,
-                                if field_count == 1 { "" } else { "s" }
-                            )?;
-                        }
-                        // Unit variant
+                        let field_count: usize = fields.to_array()?.count();
+                        let display_count = if has_stripped {
+                            format!("{}+", field_count)
+                        } else {
+                            format!("{}", field_count)
+                        };
+                        write!(
+                            self.writer,
+                            " {{ /* {} field{} */ }}",
+                            display_count,
+                            if field_count == 1 { "" } else { "s" }
+                        )?;
                     }
+                    // Tuple variant
+                    else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
+                        // Use the same approach as StructFormatter: check for null values
+                        let mut field_ids: Vec<_> = tuple_kind.to_array()?.collect();
+                        let has_stripped = field_ids.iter().any(|x| x.kind().is_null());
+                        field_ids.retain(|x| !x.kind().is_null());
+
+                        let field_count = field_ids.len();
+                        let display_count = if has_stripped {
+                            format!("{}+", field_count)
+                        } else {
+                            format!("{}", field_count)
+                        };
+                        write!(
+                            self.writer,
+                            "(/* {} field{} */)",
+                            display_count,
+                            if field_count == 1 { "" } else { "s" }
+                        )?;
+                    }
+                    // Unit variant
+                }
             }
 
             // Check if enum itself has stripped variants
             let enum_inner = inner;
             if let Some(kind) = enum_inner.to_member("kind")?.get()
-                && let Some(enum_kind) = kind.to_member("enum")?.get() {
-                    let has_stripped: bool = enum_kind
-                        .to_member("has_stripped_fields")?
-                        .get()
-                        .map(|v| v.try_into().unwrap_or(false))
-                        .unwrap_or(false);
+                && let Some(enum_kind) = kind.to_member("enum")?.get()
+            {
+                let has_stripped: bool = enum_kind
+                    .to_member("has_stripped_fields")?
+                    .get()
+                    .map(|v| v.try_into().unwrap_or(false))
+                    .unwrap_or(false);
 
-                    if has_stripped {
-                        if !variant_ids.is_empty() {
-                            writeln!(self.writer, ",")?;
-                        }
-                        writeln!(self.writer, "    // ... other variants")?;
+                if has_stripped {
+                    if !variant_ids.is_empty() {
+                        writeln!(self.writer, ",")?;
                     }
+                    writeln!(self.writer, "    // ... other variants")?;
                 }
+            }
         }
 
         write!(self.writer, "\n}}")?;
@@ -552,15 +558,16 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
         // Check for discriminant
         let discriminant = inner.to_member("discriminant")?;
         if let Some(disc) = discriminant.get()
-            && !disc.kind().is_null() {
-                write!(self.writer, " = ")?;
-                let disc_str: String = if let Some(disc_value) = disc.to_member("value")?.get() {
-                    disc_value.try_into()?
-                } else {
-                    disc.try_into()?
-                };
-                write!(self.writer, "{}", disc_str)?;
-            }
+            && !disc.kind().is_null()
+        {
+            write!(self.writer, " = ")?;
+            let disc_str: String = if let Some(disc_value) = disc.to_member("value")?.get() {
+                disc_value.try_into()?
+            } else {
+                disc.try_into()?
+            };
+            write!(self.writer, "{}", disc_str)?;
+        }
 
         // Format variant kind (struct, tuple, or unit)
         let kind = inner.to_member("kind")?;
@@ -760,9 +767,10 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
                     // Format bounds if present
                     let kind = param.to_member("kind")?;
                     if let Some(kind_obj) = kind.get()
-                        && let Some(type_bounds) = kind_obj.to_member("type")?.get() {
-                            self.format_type_bounds(type_bounds)?;
-                        }
+                        && let Some(type_bounds) = kind_obj.to_member("type")?.get()
+                    {
+                        self.format_type_bounds(type_bounds)?;
+                    }
                 }
 
                 write!(self.writer, ">")?;
@@ -796,9 +804,10 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
 
                         // Format trait generic args if present
                         if let Some(args) = trait_info.to_member("args")?.get()
-                            && !args.kind().is_null() {
-                                self.format_trait_args(args)?;
-                            }
+                            && !args.kind().is_null()
+                        {
+                            self.format_trait_args(args)?;
+                        }
                     }
                 }
             }
@@ -859,11 +868,12 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
         let output = sig.to_member("output")?;
 
         if let Some(output_type) = output.get()
-            && !output_type.kind().is_null() {
-                write!(self.writer, " -> ")?;
-                let formatted_type = crate::format_type::format_to_string(self.doc, output_type)?;
-                write!(self.writer, "{}", formatted_type)?;
-            }
+            && !output_type.kind().is_null()
+        {
+            write!(self.writer, " -> ")?;
+            let formatted_type = crate::format_type::format_to_string(self.doc, output_type)?;
+            write!(self.writer, "{}", formatted_type)?;
+        }
 
         Ok(())
     }
@@ -928,9 +938,10 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
                             }
 
                             if let Some(args) = trait_info.to_member("args")?.get()
-                                && !args.kind().is_null() {
-                                    self.format_trait_args(args)?;
-                                }
+                                && !args.kind().is_null()
+                            {
+                                self.format_trait_args(args)?;
+                            }
                         }
                     }
                 }
