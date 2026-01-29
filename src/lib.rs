@@ -110,7 +110,7 @@ impl std::fmt::Display for Error {
                 }
 
                 if backtrace.status() == std::backtrace::BacktraceStatus::Captured {
-                    write!(f, "\n{}", backtrace)?;
+                    write!(f, "\n\nBACKTRACE:\n{}", backtrace)?;
                 }
                 Ok(())
             }
