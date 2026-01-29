@@ -25,12 +25,12 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
     }
 
     pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
-        write!(self.writer, "struct {} {{\n", self.name)?;
-
+        write!(self.writer, "struct {}", self.name)?;
         let kind = inner.to_member("kind")?;
         if let Some(kind_obj) = kind.get() {
             // Check for plain struct variant
             if let Some(plain_kind) = kind_obj.to_member("plain")?.get() {
+                write!(self.writer, " {{\n")?;
                 let fields = plain_kind.to_member("fields")?.required()?;
                 let has_stripped: bool = plain_kind
                     .to_member("has_stripped_fields")?
@@ -61,16 +61,16 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
                 if has_stripped {
                     write!(self.writer, "    // ... other fields\n")?;
                 }
+
+                write!(self.writer, "}}")?;
             } else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
                 // Tuple struct - tuple_kind is an array
-                let has_stripped: bool = kind_obj
-                    .to_member("has_stripped_fields")?
-                    .required()?
-                    .try_into()?;
+                let mut field_ids: Vec<_> = tuple_kind.to_array()?.collect();
 
-                let field_ids: Vec<_> = tuple_kind.to_array()?.collect();
+                let has_stripped = field_ids.iter().any(|x| x.kind().is_null());
+                field_ids.retain(|x| !x.kind().is_null());
 
-                write!(self.writer, "    ")?;
+                write!(self.writer, "(")?;
                 for (i, field_id) in field_ids.iter().enumerate() {
                     if i > 0 {
                         write!(self.writer, ", ")?;
@@ -92,13 +92,13 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
                     write!(self.writer, "/* ... */")?;
                 }
 
-                write!(self.writer, ",\n")?;
+                write!(self.writer, ");")?;
             } else if let Some(_unit_kind) = kind_obj.to_member("unit")?.get() {
                 // Unit struct - no fields
+                write!(self.writer, ";")?;
             }
         }
 
-        write!(self.writer, "}}")?;
         Ok(())
     }
 }
