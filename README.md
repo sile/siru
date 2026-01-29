@@ -1,7 +1,7 @@
 siru
 ====
 
-Command-line tool to find / view Rust crate documents using rustdoc JSON output.
+Command-line tool to find / view Rust crate documents using [rustdoc JSON output][rustdoc-json].
 
 
-- https://rust-lang.github.io/rfcs/2963-rustdoc-json.html
+[rustdoc-json]: https://rust-lang.github.io/rfcs/2963-rustdoc-json.html
