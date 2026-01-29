@@ -266,7 +266,13 @@ fn print_detail<W: std::io::Write>(
             writeln!(writer, "{}\n", increased_headings)?;
         }
 
-        // todo: print item additional info such as trait impls
+        let inner = item.inner(&doc.json);
+        if let Some(impls) = inner.to_member("impls")?.get() {
+            //
+        }
+        if let Some(impls) = inner.to_member("implementations")?.get() {
+            //
+        }
 
         writeln!(writer)?;
     }
