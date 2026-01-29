@@ -63,7 +63,7 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
                             let field_count: usize = tuple_kind.to_array()?.count();
                             write!(
                                 self.writer,
-                                "({} field{})",
+                                "(/* {} field{} */)",
                                 field_count,
                                 if field_count == 1 { "" } else { "s" }
                             )?;
