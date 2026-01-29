@@ -8,7 +8,7 @@ siru
 
 A command-line tool to find and view Rust crate documentation from [rustdoc JSON output][rustdoc-json].
 
-Output is formatted as Markdown, making it easy to pipeline with other commands like `less` (pager), `bat` (pager with syntax highlighting), or save to a file for viewing in your favorite Markdown editor.
+Output is formatted as Markdown, making it easy to pipeline with other commands like `less`, `bat` for paging and syntax highlighting, or save to a file for viewing in your favorite Markdown editor.
 
 "siru" means "知る(to know)" in Japanese.
 
