@@ -12,6 +12,8 @@ Output is formatted as Markdown, making it easy to pipeline with other commands 
 
 "siru" means "知る(to know)" in Japanese.
 
+![siru](siru.gif)
+
 ## Installation
 
 ```console
