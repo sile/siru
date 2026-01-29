@@ -1,7 +1,7 @@
 pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     let doc_paths: Vec<std::path::PathBuf> = noargs::opt("doc-path")
         .short('d')
-        .ty("FILE|DIR[:FILE|DIR]...")
+        .ty("PATH[:PATH]*")
         .doc("Path(s) to doc files or dirs containing *.json files, separated by colons")
         .env("SIRU_DOC_PATH")
         .default("target/doc/")
@@ -22,7 +22,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     let mut target_kinds = std::collections::HashSet::new();
     while let Some(kinds) = noargs::opt("kind")
         .short('k')
-        .ty(crate::doc::ItemKind::KEYWORDS)
+        .ty(crate::doc::ItemKind::MAIN_KEYWORDS)
         .doc("Filter to specific item kind(s) (can be specified multiple times)")
         .take(args)
         .present_and_then(|a| {

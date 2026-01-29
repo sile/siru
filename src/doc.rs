@@ -62,6 +62,7 @@ impl std::fmt::Display for ItemKind {
 impl ItemKind {
     pub const KEYWORDS: &'static str =
         "mod|enum|union|variant|struct|field|type|fn|const|trait|macro";
+    pub const MAIN_KEYWORDS: &'static str = "mod|enum|struct|trait|fn|...";
 
     pub fn parse_keyword_str(s: &str) -> Option<Vec<Self>> {
         match s {
