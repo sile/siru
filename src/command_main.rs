@@ -263,12 +263,15 @@ fn print_item_signature<W: std::io::Write>(
 
     writeln!(writer, "```rust")?;
     match item.kind {
-        crate::doc::ItemKind::TypeAlias | crate::doc::ItemKind::AssocType => {
+        crate::doc::ItemKind::TypeAlias
+        | crate::doc::ItemKind::AssocType
+        | crate::doc::ItemKind::TraitAlias => {
+            let kw = item.kind.as_keyword_str();
             let view = crate::item_view::TypeView::new(doc, item);
             if let Some(ty) = view.ty()? {
-                writeln!(writer, "type {} = {};", view.name()?, ty)?;
+                writeln!(writer, "{kw} {} = {};", view.name()?, ty)?;
             } else {
-                writeln!(writer, "type {};", view.name()?)?;
+                writeln!(writer, "{kw} {};", view.name()?)?;
             }
         }
         crate::doc::ItemKind::Primitive => {
