@@ -1,3 +1,84 @@
+pub fn format_enum_to_string(
+    doc: &crate::doc::CrateDoc,
+    item: &crate::doc::Item,
+) -> crate::Result<String> {
+    let name = item.name.as_ref().expect("bug");
+    let inner = item.inner(&doc.json);
+    let mut buffer = Vec::new();
+    let mut formatter = EnumFormatter::new(&mut buffer, doc, name);
+    formatter
+        .format(inner)
+        .map_err(|e| e.set_json_span(inner).set_json_text(doc.json.text()))?;
+    Ok(String::from_utf8(buffer).expect("bug"))
+}
+
+#[derive(Debug)]
+pub struct EnumFormatter<'a, W> {
+    writer: W,
+    doc: &'a crate::doc::CrateDoc,
+    name: &'a str,
+}
+
+impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
+    pub fn new(writer: W, doc: &'a crate::doc::CrateDoc, name: &'a str) -> Self {
+        Self { writer, doc, name }
+    }
+
+    pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
+        write!(self.writer, "enum {} {{\n", self.name)?;
+
+        let variants = inner.to_member("variants")?;
+        if let Some(variants_array) = variants.get() {
+            let variant_ids: Vec<_> = variants_array.to_array()?.collect();
+
+            for (i, variant_id) in variant_ids.iter().enumerate() {
+                if i > 0 {
+                    write!(self.writer, ",\n")?;
+                }
+
+                let variant_item_value = self.doc.items.get(&self.doc.json, *variant_id)?;
+                let variant_item = crate::doc::Item::try_from(variant_item_value)?;
+                let variant_name = variant_item.name.as_deref().unwrap_or("?");
+                let variant_inner = variant_item.inner(&self.doc.json);
+
+                write!(self.writer, "    {}", variant_name)?;
+
+                // Format variant kind with field count
+                let kind = variant_inner.to_member("kind")?;
+                if let Some(kind_obj) = kind.get() {
+                    if !kind_obj.kind().is_string() {
+                        // Struct variant
+                        if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
+                            let fields = struct_kind.to_member("fields")?.required()?;
+                            let field_count: usize = fields.to_array()?.count();
+                            write!(
+                                self.writer,
+                                " {{ /* {} field{} */ }}",
+                                field_count,
+                                if field_count == 1 { "" } else { "s" }
+                            )?;
+                        }
+                        // Tuple variant
+                        else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
+                            let field_count: usize = tuple_kind.to_array()?.count();
+                            write!(
+                                self.writer,
+                                "({} field{})",
+                                field_count,
+                                if field_count == 1 { "" } else { "s" }
+                            )?;
+                        }
+                        // Unit variant
+                    }
+                }
+            }
+        }
+
+        write!(self.writer, "\n}}")?;
+        Ok(())
+    }
+}
+
 pub fn format_enum_variant_to_string(
     doc: &crate::doc::CrateDoc,
     item: &crate::doc::Item,
