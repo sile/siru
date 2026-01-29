@@ -2,7 +2,7 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
     let doc_paths: Vec<std::path::PathBuf> = noargs::opt("doc-path")
         .short('d')
         .ty("FILE|DIR[:FILE|DIR]...")
-        .doc("Path(s) to documentation files or directories containing *.json files, separated by colons")
+        .doc("Path(s) to doc files or dirs containing *.json files, separated by colons")
         .env("SIRU_DOC_PATH")
         .default("target/doc/")
         .take(args)
