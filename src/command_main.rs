@@ -267,30 +267,12 @@ fn print_detail<W: std::io::Write>(
         }
 
         let inner = item.inner(&doc.json);
-        if let Some(impls) = inner.to_member("impls")?.get() {
-            writeln!(writer, "**Trait Implementations**:\n")?;
-
-            for impl_id in impls.to_array()? {
-                if let Ok(impl_item_value) = doc.items.get(&doc.json, impl_id) {
-                    if let Ok(impl_item) = crate::doc::Item::try_from(impl_item_value) {
-                        let impl_inner = impl_item.inner(&doc.json);
-                        write!(
-                            writer,
-                            "- `{}`",
-                            impl_item.name.as_ref().map(|s| s.as_str()).unwrap_or("?")
-                        )?;
-                        if show_options.show_inner_json {
-                            write!(writer, ": `{impl_inner}`")?;
-                        }
-                        writeln!(writer)?;
-                    }
-                }
-            }
-
-            writeln!(writer)?;
+        if let Some(_impls) = inner.to_member("impls")?.get() {
+            // TODO
         }
-        if let Some(impls) = inner.to_member("implementations")?.get() {
-            //
+
+        if let Some(_impls) = inner.to_member("implementations")?.get() {
+            // TODO
         }
 
         writeln!(writer)?;
