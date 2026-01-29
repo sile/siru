@@ -32,14 +32,6 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         target_kinds.extend(kinds);
     }
 
-    let view_command = noargs::opt("view-command")
-        .short('v')
-        .ty("COMMAND")
-        .doc("Shell command to pipe output through (e.g., less, bat -lmd)")
-        .env("SIRU_VIEW_COMMAND")
-        .take(args)
-        .present_and_then(|o| o.value().parse::<String>())?;
-
     let show_options = ShowOptions {
         show_inner_json: noargs::flag("show-inner-json")
             .doc("Print inner JSON representation before item signature")
@@ -110,28 +102,9 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         docs.push(doc);
     }
 
-    if let Some(cmd) = view_command {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "sh".to_string());
-
-        let mut child = std::process::Command::new(&shell)
-            .arg("-c")
-            .arg(&cmd)
-            .stdin(std::process::Stdio::piped())
-            .spawn()
-            .map_err(|e| format!("failed to spawn shell '{}': {}", shell, e))?;
-
-        let mut stdin = child
-            .stdin
-            .take()
-            .ok_or("failed to get child process stdin")?;
-        print_output(&mut stdin, &docs, &show_options)?;
-        std::mem::drop(stdin);
-        let _ = child.wait();
-    } else {
-        let stdout = std::io::stdout();
-        let mut writer = stdout.lock();
-        print_output(&mut writer, &docs, &show_options)?;
-    }
+    let stdout = std::io::stdout();
+    let mut writer = stdout.lock();
+    print_output(&mut writer, &docs, &show_options)?;
 
     Ok(())
 }
