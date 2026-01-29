@@ -2,7 +2,6 @@ siru
 ====
 
 [![siru](https://img.shields.io/crates/v/siru.svg)](https://crates.io/crates/siru)
-[![Documentation](https://docs.rs/siru/badge.svg)](https://docs.rs/siru)
 [![Actions Status](https://github.com/sile/siru/workflows/CI/badge.svg)](https://github.com/sile/siru/actions)
 ![License](https://img.shields.io/crates/l/siru)
 
