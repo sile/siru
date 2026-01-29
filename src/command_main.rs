@@ -26,7 +26,12 @@ pub fn run(args: &mut noargs::RawArgs) -> noargs::Result<()> {
         .doc("Filter to specific item kind(s) (can be specified multiple times)")
         .take(args)
         .present_and_then(|a| {
-            crate::doc::ItemKind::parse_keyword_str(a.value()).ok_or_else(|| "TODO")
+            crate::doc::ItemKind::parse_keyword_str(a.value()).ok_or_else(|| {
+                format!(
+                    "invalid item kind: must be one of {}",
+                    crate::doc::ItemKind::KEYWORDS
+                )
+            })
         })?
     {
         target_kinds.extend(kinds);
