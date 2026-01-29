@@ -65,14 +65,13 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
             }
 
             let field_item_value = self.doc.items.get(&self.doc.json, *field_id_value)?;
-
             let field_item = crate::doc::Item::try_from(field_item_value)?;
             let field_name = field_item.name.as_deref().unwrap_or("?");
             let field_inner = field_item.inner(&self.doc.json);
-            let field_type = field_inner.to_member("type")?.required()?;
+            // Use the entire field_inner as the type, not field_inner.to_member("type")
+            let formatted_type = crate::format_type::format_to_string(self.doc, field_inner)?;
 
             write!(self.writer, "{}: ", field_name)?;
-            let formatted_type = crate::format_type::format_to_string(self.doc, field_type)?;
             write!(self.writer, "{}", formatted_type)?;
         }
 
@@ -92,12 +91,11 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
             }
 
             let field_item_value = self.doc.items.get(&self.doc.json, *field_id_value)?;
-
             let field_item = crate::doc::Item::try_from(field_item_value)?;
             let field_inner = field_item.inner(&self.doc.json);
-            let field_type = field_inner.to_member("type")?.required()?;
+            // Use the entire field_inner as the type
+            let formatted_type = crate::format_type::format_to_string(self.doc, field_inner)?;
 
-            let formatted_type = crate::format_type::format_to_string(self.doc, field_type)?;
             write!(self.writer, "{}", formatted_type)?;
         }
 
