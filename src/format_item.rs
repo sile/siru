@@ -64,11 +64,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
                         write!(self.writer, "{}", trait_path)?;
 
                         // Format trait generic args if present
-                        if let Some(args) = trait_info.to_member("args")?.get() {
-                            if !args.kind().is_null() {
+                        if let Some(args) = trait_info.to_member("args")?.get()
+                            && !args.kind().is_null() {
                                 self.format_trait_args(args)?;
                             }
-                        }
                     }
                 }
             }
@@ -79,7 +78,7 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
             self.format_where_clauses(g)?;
         }
 
-        write!(self.writer, " {{\n")?;
+        writeln!(self.writer, " {{")?;
 
         // Format trait items (methods, associated types, etc.)
         let items = inner.to_member("items")?;
@@ -88,7 +87,7 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
 
             for (i, item_id) in item_ids.iter().enumerate() {
                 if i > 0 {
-                    write!(self.writer, "\n")?;
+                    writeln!(self.writer)?;
                 }
 
                 let item_value = self.doc.items.get(&self.doc.json, *item_id)?;
@@ -102,13 +101,13 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
                     let formatted = crate::format_item::format_function_to_string(
                         self.doc, item_name, item_inner,
                     )?;
-                    write!(self.writer, "    {};\n", formatted)?;
+                    writeln!(self.writer, "    {};", formatted)?;
                 } else if item_inner.to_member("assoc_type")?.get().is_some() {
                     // It's an associated type
-                    write!(self.writer, "    type {};\n", item_name)?;
+                    writeln!(self.writer, "    type {};", item_name)?;
                 } else if item_inner.to_member("assoc_const")?.get().is_some() {
                     // It's an associated constant
-                    write!(self.writer, "    const {};\n", item_name)?;
+                    writeln!(self.writer, "    const {};", item_name)?;
                 }
             }
         }
@@ -139,11 +138,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
 
                     // Format bounds if present
                     let kind = param.to_member("kind")?;
-                    if let Some(kind_obj) = kind.get() {
-                        if let Some(type_bounds) = kind_obj.to_member("type")?.get() {
+                    if let Some(kind_obj) = kind.get()
+                        && let Some(type_bounds) = kind_obj.to_member("type")?.get() {
                             self.format_type_bounds(type_bounds)?;
                         }
-                    }
                 }
 
                 write!(self.writer, ">")?;
@@ -176,11 +174,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
                         write!(self.writer, "{}", trait_path)?;
 
                         // Format trait generic args if present
-                        if let Some(args) = trait_info.to_member("args")?.get() {
-                            if !args.kind().is_null() {
+                        if let Some(args) = trait_info.to_member("args")?.get()
+                            && !args.kind().is_null() {
                                 self.format_trait_args(args)?;
                             }
-                        }
                     }
                 }
             }
@@ -264,11 +261,10 @@ impl<'a, W: std::io::Write> TraitFormatter<'a, W> {
                                 .to_unquoted_string_str()?;
                             write!(self.writer, "{}", trait_path)?;
 
-                            if let Some(args) = trait_info.to_member("args")?.get() {
-                                if !args.kind().is_null() {
+                            if let Some(args) = trait_info.to_member("args")?.get()
+                                && !args.kind().is_null() {
                                     self.format_trait_args(args)?;
                                 }
-                            }
                         }
                     }
                 }
@@ -334,7 +330,7 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
                 // Unit struct - no fields
                 write!(self.writer, ";")?;
             } else if let Some(plain_kind) = kind_obj.to_member("plain")?.get() {
-                write!(self.writer, " {{\n")?;
+                writeln!(self.writer, " {{")?;
                 let fields = plain_kind.to_member("fields")?.required()?;
                 let has_stripped: bool = plain_kind
                     .to_member("has_stripped_fields")?
@@ -345,7 +341,7 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
 
                 for (i, field_id) in field_ids.iter().enumerate() {
                     if i > 0 {
-                        write!(self.writer, ",\n")?;
+                        writeln!(self.writer, ",")?;
                     }
 
                     let field_item_value = self.doc.items.get(&self.doc.json, *field_id)?;
@@ -359,11 +355,11 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
                 }
 
                 if !field_ids.is_empty() {
-                    write!(self.writer, ",\n")?;
+                    writeln!(self.writer, ",")?;
                 }
 
                 if has_stripped {
-                    write!(self.writer, "    // ... other fields\n")?;
+                    writeln!(self.writer, "    // ... other fields")?;
                 }
 
                 write!(self.writer, "}}")?;
@@ -431,7 +427,7 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
     }
 
     pub fn format(&mut self, inner: nojson::RawJsonValue) -> crate::Result<()> {
-        write!(self.writer, "enum {} {{\n", self.name)?;
+        writeln!(self.writer, "enum {} {{", self.name)?;
 
         let variants = inner.to_member("variants")?;
         if let Some(variants_array) = variants.get() {
@@ -439,7 +435,7 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
 
             for (i, variant_id) in variant_ids.iter().enumerate() {
                 if i > 0 {
-                    write!(self.writer, ",\n")?;
+                    writeln!(self.writer, ",")?;
                 }
 
                 let variant_item_value = self.doc.items.get(&self.doc.json, *variant_id)?;
@@ -451,8 +447,8 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
 
                 // Format variant kind with field count
                 let kind = variant_inner.to_member("kind")?;
-                if let Some(kind_obj) = kind.get() {
-                    if !kind_obj.kind().is_string() {
+                if let Some(kind_obj) = kind.get()
+                    && !kind_obj.kind().is_string() {
                         // Struct variant
                         if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
                             let fields = struct_kind.to_member("fields")?.required()?;
@@ -497,13 +493,12 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
                         }
                         // Unit variant
                     }
-                }
             }
 
             // Check if enum itself has stripped variants
             let enum_inner = inner;
-            if let Some(kind) = enum_inner.to_member("kind")?.get() {
-                if let Some(enum_kind) = kind.to_member("enum")?.get() {
+            if let Some(kind) = enum_inner.to_member("kind")?.get()
+                && let Some(enum_kind) = kind.to_member("enum")?.get() {
                     let has_stripped: bool = enum_kind
                         .to_member("has_stripped_fields")?
                         .get()
@@ -512,12 +507,11 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
 
                     if has_stripped {
                         if !variant_ids.is_empty() {
-                            write!(self.writer, ",\n")?;
+                            writeln!(self.writer, ",")?;
                         }
-                        write!(self.writer, "    // ... other variants\n")?;
+                        writeln!(self.writer, "    // ... other variants")?;
                     }
                 }
-            }
         }
 
         write!(self.writer, "\n}}")?;
@@ -557,8 +551,8 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
 
         // Check for discriminant
         let discriminant = inner.to_member("discriminant")?;
-        if let Some(disc) = discriminant.get() {
-            if !disc.kind().is_null() {
+        if let Some(disc) = discriminant.get()
+            && !disc.kind().is_null() {
                 write!(self.writer, " = ")?;
                 let disc_str: String = if let Some(disc_value) = disc.to_member("value")?.get() {
                     disc_value.try_into()?
@@ -567,7 +561,6 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
                 };
                 write!(self.writer, "{}", disc_str)?;
             }
-        }
 
         // Format variant kind (struct, tuple, or unit)
         let kind = inner.to_member("kind")?;
@@ -766,11 +759,10 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
 
                     // Format bounds if present
                     let kind = param.to_member("kind")?;
-                    if let Some(kind_obj) = kind.get() {
-                        if let Some(type_bounds) = kind_obj.to_member("type")?.get() {
+                    if let Some(kind_obj) = kind.get()
+                        && let Some(type_bounds) = kind_obj.to_member("type")?.get() {
                             self.format_type_bounds(type_bounds)?;
                         }
-                    }
                 }
 
                 write!(self.writer, ">")?;
@@ -803,11 +795,10 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
                         write!(self.writer, "{}", trait_path)?;
 
                         // Format trait generic args if present
-                        if let Some(args) = trait_info.to_member("args")?.get() {
-                            if !args.kind().is_null() {
+                        if let Some(args) = trait_info.to_member("args")?.get()
+                            && !args.kind().is_null() {
                                 self.format_trait_args(args)?;
                             }
-                        }
                     }
                 }
             }
@@ -867,13 +858,12 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
     fn format_function_output(&mut self, sig: nojson::RawJsonValue) -> crate::Result<()> {
         let output = sig.to_member("output")?;
 
-        if let Some(output_type) = output.get() {
-            if !output_type.kind().is_null() {
+        if let Some(output_type) = output.get()
+            && !output_type.kind().is_null() {
                 write!(self.writer, " -> ")?;
                 let formatted_type = crate::format_type::format_to_string(self.doc, output_type)?;
                 write!(self.writer, "{}", formatted_type)?;
             }
-        }
 
         Ok(())
     }
@@ -937,11 +927,10 @@ impl<'a, W: std::io::Write> FunctionFormatter<'a, W> {
                                 write!(self.writer, "{}", trait_path)?;
                             }
 
-                            if let Some(args) = trait_info.to_member("args")?.get() {
-                                if !args.kind().is_null() {
+                            if let Some(args) = trait_info.to_member("args")?.get()
+                                && !args.kind().is_null() {
                                     self.format_trait_args(args)?;
                                 }
-                            }
                         }
                     }
                 }

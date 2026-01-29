@@ -159,7 +159,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "proc_macro" => Ok(ItemKind::ProcMacro),
             "impl" => Ok(ItemKind::Impl),
             "primitive" => Ok(ItemKind::Primitive),
-            _ => Err(kind.invalid(format!("unknown item kind"))),
+            _ => Err(kind.invalid("unknown item kind".to_string())),
         }
     }
 }

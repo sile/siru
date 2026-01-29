@@ -95,8 +95,8 @@ impl std::fmt::Display for Error {
                     write!(f, "{}", crate::json::format_parse_error(text, error))?;
 
                     // Show the range of text with span highlighting
-                    if let Some(span) = span {
-                        if span.start < text.len() && span.end <= text.len() {
+                    if let Some(span) = span
+                        && span.start < text.len() && span.end <= text.len() {
                             let error_text = &text[span.clone()];
                             write!(
                                 f,
@@ -104,7 +104,6 @@ impl std::fmt::Display for Error {
                                 span.start, span.end, error_text
                             )?;
                         }
-                    }
                 } else {
                     write!(f, "JSON parse error: {}", error)?;
                 }

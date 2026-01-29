@@ -129,12 +129,11 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
         write!(self.writer, "{}", prefix)?;
 
         // Write lifetime if present
-        if let Some(lifetime_val) = lifetime.get() {
-            if !lifetime_val.kind().is_null() {
+        if let Some(lifetime_val) = lifetime.get()
+            && !lifetime_val.kind().is_null() {
                 let lifetime_str = lifetime_val.to_unquoted_string_str()?;
                 write!(self.writer, "{} ", lifetime_str)?;
             }
-        }
 
         self.format_type(inner_type)
     }
@@ -228,12 +227,11 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
         }
 
         // Add lifetime if present
-        if let Some(lifetime) = dyn_trait.to_member("lifetime")?.get() {
-            if !lifetime.kind().is_null() {
+        if let Some(lifetime) = dyn_trait.to_member("lifetime")?.get()
+            && !lifetime.kind().is_null() {
                 let lifetime_str = lifetime.to_unquoted_string_str()?;
                 write!(self.writer, " + {}", lifetime_str)?;
             }
-        }
 
         Ok(())
     }
@@ -314,12 +312,11 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
                         .to_unquoted_string_str()?;
                     write!(self.writer, "{}", name)?;
 
-                    if let Some(binding) = constraint.to_member("binding")?.get() {
-                        if let Some(equality) = binding.to_member("equality")?.get() {
+                    if let Some(binding) = constraint.to_member("binding")?.get()
+                        && let Some(equality) = binding.to_member("equality")?.get() {
                             write!(self.writer, " = ")?;
                             self.format_type(equality.to_member("type")?.required()?)?;
                         }
-                    }
 
                     first = false;
                 }
@@ -375,12 +372,11 @@ impl<'a, W: std::io::Write> TypeFormatter<'a, W> {
 
         // Format output
         let output = sig.to_member("output")?;
-        if let Some(output_type) = output.get() {
-            if !output_type.kind().is_null() {
+        if let Some(output_type) = output.get()
+            && !output_type.kind().is_null() {
                 write!(self.writer, " -> ")?;
                 self.format_type(output_type)?;
             }
-        }
 
         Ok(())
     }

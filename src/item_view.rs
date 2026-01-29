@@ -15,7 +15,7 @@ impl<'a> FunctionView<'a> {
 
     pub fn signature(&self) -> crate::Result<String> {
         let inner = self.item.inner(&self.doc.json);
-        crate::format_item::format_function_to_string(&self.doc, self.name(), inner)
+        crate::format_item::format_function_to_string(self.doc, self.name(), inner)
     }
 }
 
@@ -36,7 +36,7 @@ impl<'a> FieldView<'a> {
 
     pub fn ty(&self) -> crate::Result<String> {
         let inner = self.item.inner(&self.doc.json);
-        crate::format_type::format_to_string(&self.doc, inner)
+        crate::format_type::format_to_string(self.doc, inner)
     }
 }
 
@@ -162,7 +162,7 @@ impl<'a> TypeView<'a> {
             return Ok(None);
         }
 
-        crate::format_type::format_to_string(&self.doc, ty).map(Some)
+        crate::format_type::format_to_string(self.doc, ty).map(Some)
     }
 }
 
@@ -184,6 +184,6 @@ impl<'a> ConstantView<'a> {
     pub fn ty(&self) -> crate::Result<String> {
         let inner = self.item.inner(&self.doc.json);
         let ty = inner.to_member("type")?.required()?;
-        crate::format_type::format_to_string(&self.doc, ty)
+        crate::format_type::format_to_string(self.doc, ty)
     }
 }

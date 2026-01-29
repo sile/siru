@@ -6,9 +6,7 @@ pub fn add_rust_to_code_blocks(text: &str) -> String {
     while i < lines.len() {
         let line = lines[i];
 
-        if line.starts_with("```") {
-            let rest = &line[3..];
-
+        if let Some(rest) = line.strip_prefix("```") {
             if rest.is_empty() || rest.chars().all(|c| c.is_whitespace()) {
                 result.push_str("```rust\n");
             } else {
