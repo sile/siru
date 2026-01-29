@@ -39,15 +39,19 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
         // Format variant kind (struct, tuple, or unit)
         let kind = inner.to_member("kind")?;
         if let Some(kind_obj) = kind.get() {
-            // Check for struct variant
-            if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
-                self.format_struct_variant(struct_kind)?;
+            // Only process if kind is an object, not a string
+            if !kind_obj.kind().is_string() {
+                // Check for struct variant
+                if let Some(struct_kind) = kind_obj.to_member("struct")?.get() {
+                    self.format_struct_variant(struct_kind)?;
+                }
+                // Check for tuple variant
+                else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
+                    self.format_tuple_variant(tuple_kind)?;
+                }
+                // Unit variant has no additional formatting
             }
-            // Check for tuple variant
-            else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
-                self.format_tuple_variant(tuple_kind)?;
-            }
-            // Unit variant has no additional formatting
+            // If kind is a string (like "plain"), it's a unit variant with no additional formatting
         }
 
         Ok(())
