@@ -6,7 +6,9 @@ pub fn format_enum_variant_to_string(
     let inner = item.inner(&doc.json);
     let mut buffer = Vec::new();
     let mut formatter = EnumVariantFormatter::new(&mut buffer, doc, name);
-    formatter.format(inner)?;
+    formatter
+        .format(inner)
+        .map_err(|e| e.set_json_span(inner).set_json_text(doc.json.text()))?;
     Ok(String::from_utf8(buffer).expect("bug"))
 }
 
