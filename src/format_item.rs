@@ -458,14 +458,15 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
                             let fields = struct_kind.to_member("fields")?.required()?;
                             let has_stripped: bool = struct_kind
                                 .to_member("has_stripped_fields")?
-                                .required()?
-                                .try_into()?;
+                                .get()
+                                .map(|v| v.try_into().unwrap_or(false))
+                                .unwrap_or(false);
 
                             let field_count: usize = fields.to_array()?.count();
                             let display_count = if has_stripped {
-                                format!("{field_count}+")
+                                format!("{}+", field_count)
                             } else {
-                                format!("{field_count}")
+                                format!("{}", field_count)
                             };
                             write!(
                                 self.writer,
@@ -476,16 +477,16 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
                         }
                         // Tuple variant
                         else if let Some(tuple_kind) = kind_obj.to_member("tuple")?.get() {
-                            let has_stripped: bool = kind_obj
-                                .to_member("has_stripped_fields")?
-                                .required()?
-                                .try_into()?;
+                            // Use the same approach as StructFormatter: check for null values
+                            let mut field_ids: Vec<_> = tuple_kind.to_array()?.collect();
+                            let has_stripped = field_ids.iter().any(|x| x.kind().is_null());
+                            field_ids.retain(|x| !x.kind().is_null());
 
-                            let field_count: usize = tuple_kind.to_array()?.count();
+                            let field_count = field_ids.len();
                             let display_count = if has_stripped {
-                                format!("{field_count}+")
+                                format!("{}+", field_count)
                             } else {
-                                format!("{field_count}")
+                                format!("{}", field_count)
                             };
                             write!(
                                 self.writer,
@@ -505,8 +506,9 @@ impl<'a, W: std::io::Write> EnumFormatter<'a, W> {
                 if let Some(enum_kind) = kind.to_member("enum")?.get() {
                     let has_stripped: bool = enum_kind
                         .to_member("has_stripped_fields")?
-                        .required()?
-                        .try_into()?;
+                        .get()
+                        .map(|v| v.try_into().unwrap_or(false))
+                        .unwrap_or(false);
 
                     if has_stripped {
                         if !variant_ids.is_empty() {
@@ -627,14 +629,11 @@ impl<'a, W: std::io::Write> EnumVariantFormatter<'a, W> {
     fn format_tuple_variant(
         &mut self,
         tuple_obj: nojson::RawJsonValue,
-        kind_obj: nojson::RawJsonValue,
+        _kind_obj: nojson::RawJsonValue,
     ) -> crate::Result<()> {
-        let has_stripped: bool = kind_obj
-            .to_member("has_stripped_fields")?
-            .required()?
-            .try_into()?;
-
-        let field_ids: Vec<_> = tuple_obj.to_array()?.collect();
+        let mut field_ids: Vec<_> = tuple_obj.to_array()?.collect();
+        let has_stripped = field_ids.iter().any(|x| x.kind().is_null());
+        field_ids.retain(|x| !x.kind().is_null());
 
         write!(self.writer, "(")?;
 
