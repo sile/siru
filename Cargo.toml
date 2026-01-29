@@ -2,6 +2,12 @@
 name = "siru"
 version = "0.1.0"
 edition = "2024"
+authors = ["Takeru Ohta <phjgt308@gmail.com>"]
+license = "MIT"
+description = "CLI tool to find and view rustdoc JSON"
+homepage = "https://github.com/sile/siru"
+repository = "https://github.com/sile/siru"
+readme = "README.md"
 
 [dependencies]
 noargs = "0.4.2"
