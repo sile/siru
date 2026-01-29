@@ -29,7 +29,10 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
         let kind = inner.to_member("kind")?;
         if let Some(kind_obj) = kind.get() {
             // Check for plain struct variant
-            if let Some(plain_kind) = kind_obj.to_member("plain")?.get() {
+            if kind_obj.kind().is_string() && kind_obj.to_unquoted_string_str()? == "unit" {
+                // Unit struct - no fields
+                write!(self.writer, ";")?;
+            } else if let Some(plain_kind) = kind_obj.to_member("plain")?.get() {
                 write!(self.writer, " {{\n")?;
                 let fields = plain_kind.to_member("fields")?.required()?;
                 let has_stripped: bool = plain_kind
@@ -93,9 +96,6 @@ impl<'a, W: std::io::Write> StructFormatter<'a, W> {
                 }
 
                 write!(self.writer, ");")?;
-            } else if let Some(_unit_kind) = kind_obj.to_member("unit")?.get() {
-                // Unit struct - no fields
-                write!(self.writer, ";")?;
             }
         }
 
