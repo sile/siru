@@ -316,6 +316,10 @@ fn print_item_signature<W: std::io::Write>(
             let view = crate::item_view::FunctionView::new(doc, item);
             writeln!(writer, "{}", view.signature()?)?;
         }
+        crate::doc::ItemKind::Static => {
+            let view = crate::item_view::ConstantView::new(doc, item);
+            writeln!(writer, "static {}: {};", view.name(), view.ty()?)?;
+        }
         crate::doc::ItemKind::Variant => {
             let s = crate::format_item::format_enum_variant_to_string(doc, item)?;
             writeln!(writer, "{s}")?;
