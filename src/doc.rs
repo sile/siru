@@ -43,6 +43,7 @@ pub enum ItemKind {
     TypeAlias,
     Function,
     Constant,
+    Static,
     Trait,
     TraitAlias,
     AssocType,
@@ -61,7 +62,7 @@ impl std::fmt::Display for ItemKind {
 
 impl ItemKind {
     pub const KEYWORDS: &'static str =
-        "mod|enum|union|variant|struct|field|type|fn|const|trait|macro";
+        "mod|enum|union|variant|struct|field|type|fn|const|static|trait|macro";
     pub const MAIN_KEYWORDS: &'static str = "mod|enum|struct|trait|fn|...";
 
     pub fn parse_keyword_str(s: &str) -> Option<Vec<Self>> {
@@ -79,6 +80,7 @@ impl ItemKind {
             ]),
             "fn" => Some(vec![ItemKind::Function]),
             "const" => Some(vec![ItemKind::Constant, ItemKind::AssocConst]),
+            "static" => Some(vec![ItemKind::Static]),
             "trait" => Some(vec![ItemKind::Trait, ItemKind::TraitAlias]),
             "macro" => Some(vec![ItemKind::Macro, ItemKind::ProcMacro]),
             // NOTE: Filters out unnamed items
@@ -101,6 +103,7 @@ impl ItemKind {
             ItemKind::TypeAlias => "type",
             ItemKind::Function => "fn",
             ItemKind::Constant => "const",
+            ItemKind::Static => "static",
             ItemKind::Trait => "trait",
             ItemKind::TraitAlias => "trait",
             ItemKind::AssocType => "type",
@@ -124,6 +127,7 @@ impl ItemKind {
             ItemKind::TypeAlias => "type_alias",
             ItemKind::Function => "function",
             ItemKind::Constant => "constant",
+            ItemKind::Static => "static",
             ItemKind::Trait => "trait",
             ItemKind::TraitAlias => "trait_alias",
             ItemKind::AssocType => "assoc_type",
@@ -152,6 +156,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "trait_alias" => Ok(ItemKind::TraitAlias),
             "function" => Ok(ItemKind::Function),
             "constant" => Ok(ItemKind::Constant),
+            "static" => Ok(ItemKind::Static),
             "trait" => Ok(ItemKind::Trait),
             "assoc_type" => Ok(ItemKind::AssocType),
             "assoc_const" => Ok(ItemKind::AssocConst),
@@ -159,7 +164,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for ItemKind {
             "proc_macro" => Ok(ItemKind::ProcMacro),
             "impl" => Ok(ItemKind::Impl),
             "primitive" => Ok(ItemKind::Primitive),
-            _ => Err(kind.invalid("unknown item kind".to_string())),
+            _ => Err(kind.invalid("unknown item kind")),
         }
     }
 }
@@ -185,7 +190,7 @@ impl<'text, 'raw> TryFrom<nojson::RawJsonValue<'text, 'raw>> for Item {
             .to_object()?
             .next()
             .ok_or_else(|| value.invalid("empty inner"))?;
-        let kind = kind.try_into()?;
+        let kind = kind.try_into().inspect_err(|_| println!("{value}"))?;
         let inner_index = inner.try_into()?;
         let visibility = value
             .to_member("visibility")?
@@ -445,6 +450,7 @@ impl<'a> PublicItemCollector<'a> {
             | ItemKind::TraitAlias
             | ItemKind::Function
             | ItemKind::Constant
+            | ItemKind::Static
             | ItemKind::AssocType
             | ItemKind::AssocConst
             | ItemKind::Macro
