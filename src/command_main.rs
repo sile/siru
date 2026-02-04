@@ -245,12 +245,14 @@ fn print_detail<W: std::io::Write>(
         }
 
         let inner = item.inner(&doc.json);
-        if let Some(_impls) = inner.to_member("impls")?.get() {
-            // TODO
-        }
+        if inner.kind().is_object() {
+            if let Some(_impls) = inner.to_member("impls")?.get() {
+                // TODO
+            }
 
-        if let Some(_impls) = inner.to_member("implementations")?.get() {
-            // TODO
+            if let Some(_impls) = inner.to_member("implementations")?.get() {
+                // TODO
+            }
         }
 
         writeln!(writer)?;
