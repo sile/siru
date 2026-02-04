@@ -161,7 +161,7 @@ fn print_output<W: std::io::Write>(
         if doc.show_items.is_empty() {
             continue;
         }
-        print_detail(writer, doc, show_options)?;
+        print_detail(writer, doc, show_options).map_err(|e| e.set_json_text(doc.json.text()))?;
     }
     Ok(())
 }
